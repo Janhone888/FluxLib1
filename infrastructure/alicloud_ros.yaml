@@ -1,0 +1,135 @@
+# stable_template.yaml
+ROSTemplateFormatVersion: '2015-09-01'
+Description: 图书管理系统（生产环境稳定版）
+
+Parameters:
+  RegionId:
+    Type: String
+    Default: cn-hangzhou
+    Description: 部署区域
+
+  Environment:
+    Type: String
+    Default: prod
+    AllowedValues: [prod]
+    Description: 部署环境
+
+  ExistingOTSInstance:
+    Type: String
+    Default: y01w5pa12g01
+    Description: 现有OTS实例名称
+
+Resources:
+  # 使用现有OTS实例（避免创建问题）
+  BookTable:
+    Type: ALIYUN::OTS::Table
+    Properties:
+      InstanceName: !Ref ExistingOTSInstance
+      TableName: Books
+      PrimaryKey:
+        - Name: id
+          Type: STRING
+      TimeToLive: -1
+      MaxVersions: 1
+
+  # OSS存储桶（图片）
+  ImageBucket:
+    Type: ALIYUN::OSS::Bucket
+    Properties:
+      BucketName: book-mgmt-images-prod
+      AccessControl: private
+      StorageClass: Standard
+
+  # OSS存储桶（前端）
+  FrontendBucket:
+    Type: ALIYUN::OSS::Bucket
+    Properties:
+      BucketName: book-mgmt-frontend-prod
+      AccessControl: public-read
+      WebsiteConfiguration:
+        IndexDocument: index.html
+        ErrorDocument: index.html
+
+  # API网关分组
+  BookApiGroup:
+    Type: ALIYUN::ApiGateway::Group
+    Properties:
+      GroupName: book-api-prod
+      Description: 图书管理系统API分组
+
+  # RAM角色
+  ServiceRole:
+    Type: ALIYUN::RAM::Role
+    Properties:
+      RoleName: book-mgmt-fc-role-prod
+      AssumeRolePolicyDocument:
+        Version: '1'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ["fc.aliyuncs.com"]
+            Action: ["sts:AssumeRole"]
+
+  # 函数计算服务
+  BookService:
+    Type: ALIYUN::FC::Service
+    Properties:
+      ServiceName: book-mgmt-service-prod
+      Description: 图书管理后端服务
+      Role: !GetAtt ServiceRole.Arn
+
+  # 函数计算函数
+  BookFunction:
+    Type: ALIYUN::FC::Function
+    Properties:
+      ServiceName: book-mgmt-service-prod
+      FunctionName: book-function
+      Runtime: python3.9
+      Handler: index.handler
+      Code:
+        OssBucketName: book-mgmt-deploy-prod
+        OssObjectName: book_function.zip
+      Timeout: 60
+      MemorySize: 512
+      EnvironmentVariables:
+        OTS_ENDPOINT: !Sub 'https://${ExistingOTSInstance}.cn-hangzhou.ots.aliyuncs.com'
+        OSS_BUCKET_NAME: !Ref ImageBucket
+        API_BASE_URL: !Sub 'https://${BookApiGroup.GroupId}-cn-hangzhou.api.cn-hangzhou.aliyuncs.com'
+
+  # API网关配置
+  BookApi:
+    Type: ALIYUN::ApiGateway::Api
+    Properties:
+      GroupId: !Ref BookApiGroup
+      ApiName: book-api
+      Visibility: PUBLIC
+      RequestConfig:
+        RequestHttpMethod: ANY
+        RequestPath: /{proxy+}
+      ServiceConfig:
+        ServiceAddress: !Sub 'https://book-mgmt-service-prod.cn-hangzhou.fc.aliyuncs.com'
+        FunctionComputeConfig:
+          FcRegionId: cn-hangzhou
+          ServiceName: book-mgmt-service-prod
+          FunctionName: book-function
+        ContentTypeCatagory: DEFAULT
+        ContentTypeValue: application/json
+      RequestParameters:
+        - ApiParameterName: proxy
+          Location: PATH
+          ParameterType: String
+          Required: OPTION
+
+  # API网关部署
+  BookApiDeployment:
+    Type: ALIYUN::ApiGateway::Deployment
+    Properties:
+      GroupId: !Ref BookApiGroup
+      ApiId: !Ref BookApi
+      StageName: RELEASE
+
+Outputs:
+  FrontendUrl:
+    Value: !Sub 'http://book-mgmt-frontend-prod.cn-hangzhou.oss-website.cn-hangzhou.aliyuncs.com'
+  ApiEndpoint:
+    Value: !Sub 'https://${BookApiGroup.GroupId}-cn-hangzhou.api.cn-hangzhou.aliyuncs.com'

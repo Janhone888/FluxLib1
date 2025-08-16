@@ -1,0 +1,23 @@
+#!/bin/bash
+set -euo pipefail
+
+# 设置超时时间（秒）
+INSTALL_TIMEOUT=60
+
+# 安装依赖（带超时控制）
+if [ -f "requirements.txt" ]; then
+    echo "开始安装依赖..."
+    timeout $INSTALL_TIMEOUT pip3 install -r requirements.txt -t . || {
+        echo "依赖安装超时，跳过安装直接启动"
+    }
+fi
+
+# 强制卸载冲突的包
+pip uninstall -y enum34
+
+# 设置环境变量
+export PYTHONPATH=/opt/python:/code:${PYTHONPATH:-}
+
+# 启动应用
+echo "启动应用..."
+exec python3 main.py
