@@ -4,6 +4,8 @@ FluxLib 泛集库是一个基于阿里云服务的全栈图书管理系统，采
 
 可以使用外网点击https://book-mgmt-imrt93854-janhones-projects.vercel.app/，打开我们的网站。
 
+演示视频:https://pan.baidu.com/s/1evxzun-EKBhao4pP4Q1gWA?pwd=1234
+
 
 
 ## 核心功能
