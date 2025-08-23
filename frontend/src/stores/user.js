@@ -8,6 +8,7 @@ export const useUserStore = defineStore('user', {
     userInfo: JSON.parse(localStorage.getItem('userInfo') || '{}'),
     isAuthenticated: !!localStorage.getItem('token')
   }),
+
   actions: {
     async login(credentials) {
       try {
@@ -23,6 +24,9 @@ export const useUserStore = defineStore('user', {
         localStorage.setItem('token', this.token)
         localStorage.setItem('userInfo', JSON.stringify(this.userInfo))
 
+        // 触发用户变化事件
+        window.dispatchEvent(new CustomEvent('user-changed'))
+
         return true
       } catch (error) {
         console.error('登录失败:', error)
@@ -36,6 +40,10 @@ export const useUserStore = defineStore('user', {
       this.isAuthenticated = false
       localStorage.removeItem('token')
       localStorage.removeItem('userInfo')
+
+      // 触发用户变化事件
+      window.dispatchEvent(new CustomEvent('user-changed'))
+
       router.push('/login')
     }
   }
