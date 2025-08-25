@@ -15,14 +15,24 @@ export const useBookStore = defineStore('books', {
     async fetchBooks(page = 1, pageSize = 10, category = '') {
       this.loading = true
       try {
-        // 添加分类参数
         const response = await api.getBooks(page, pageSize, category)
 
-        // 关键修复：确保使用正确的数据结构
-        if (response.data && response.data.items) {
-          this.books = response.data.items
-          this.total = response.data.total
-          return response.data
+        // 确保正确解析数据
+        let data = response.data
+        if (typeof data === 'string') {
+          try {
+            data = JSON.parse(data)
+          } catch (e) {
+            console.error('解析响应数据失败:', e)
+            this.error = '数据格式错误'
+            return { items: [], total: 0 }
+          }
+        }
+
+        if (data && data.items) {
+          this.books = data.items
+          this.total = data.total
+          return data
         } else {
           this.error = '返回数据结构错误'
           console.error('无效的响应结构:', response)
@@ -42,10 +52,21 @@ export const useBookStore = defineStore('books', {
       try {
         const response = await api.getBook(id)
 
-        // 关键修复：确保使用正确的数据结构
-        if (response.data) {
-          this.currentBook = response.data
-          return response.data
+        // 确保正确解析数据
+        let data = response.data
+        if (typeof data === 'string') {
+          try {
+            data = JSON.parse(data)
+          } catch (e) {
+            console.error('解析响应数据失败:', e)
+            this.error = '数据格式错误'
+            return null
+          }
+        }
+
+        if (data) {
+          this.currentBook = data
+          return data
         } else {
           this.error = '返回数据结构错误'
           console.error('无效的响应结构:', response)
@@ -65,16 +86,27 @@ export const useBookStore = defineStore('books', {
       try {
         const response = await api.createBook(bookData)
 
-        // 关键修复：确保使用正确的数据结构
-        if (response.data) {
-          this.books.push(response.data)
+        // 确保正确解析数据
+        let data = response.data
+        if (typeof data === 'string') {
+          try {
+            data = JSON.parse(data)
+          } catch (e) {
+            console.error('解析响应数据失败:', e)
+            this.error = '数据格式错误'
+            throw new Error('创建图书失败：无效的响应格式')
+          }
+        }
+
+        if (data) {
+          this.books.push(data)
           this.total += 1
 
           // 触发全局事件
           const event = new CustomEvent('book-added')
           window.dispatchEvent(event)
 
-          return response.data
+          return data
         } else {
           throw new Error('创建图书失败：无效的响应')
         }
@@ -92,13 +124,24 @@ export const useBookStore = defineStore('books', {
       try {
         const response = await api.updateBook(id, bookData)
 
-        // 关键修复：确保使用正确的数据结构
-        if (response.data) {
+        // 确保正确解析数据
+        let data = response.data
+        if (typeof data === 'string') {
+          try {
+            data = JSON.parse(data)
+          } catch (e) {
+            console.error('解析响应数据失败:', e)
+            this.error = '数据格式错误'
+            throw new Error('更新图书失败：无效的响应格式')
+          }
+        }
+
+        if (data) {
           const index = this.books.findIndex(book => book.id === id)
           if (index !== -1) {
             this.books[index] = { ...this.books[index], ...bookData }
           }
-          return response.data
+          return data
         } else {
           throw new Error('更新图书失败：无效的响应')
         }
@@ -115,6 +158,18 @@ export const useBookStore = defineStore('books', {
       this.loading = true
       try {
         const response = await api.deleteBook(id)
+
+        // 确保正确解析数据
+        let data = response.data
+        if (typeof data === 'string') {
+          try {
+            data = JSON.parse(data)
+          } catch (e) {
+            console.error('解析响应数据失败:', e)
+            this.error = '数据格式错误'
+            throw new Error('删除图书失败：无效的响应格式')
+          }
+        }
 
         if (response.status === 200) {
           this.books = this.books.filter(book => book.id !== id)
@@ -138,7 +193,19 @@ export const useBookStore = defineStore('books', {
         // 调用后端借阅API
         const response = await api.borrowBook(bookId, days)
 
-        if (response.data && response.data.success) {
+        // 确保正确解析数据
+        let data = response.data
+        if (typeof data === 'string') {
+          try {
+            data = JSON.parse(data)
+          } catch (e) {
+            console.error('解析响应数据失败:', e)
+            this.error = '数据格式错误'
+            throw new Error('借阅失败：无效的响应格式')
+          }
+        }
+
+        if (data && data.success) {
           // 更新本地库存和状态
           const bookIndex = this.books.findIndex(book => book.book_id === bookId)
           if (bookIndex !== -1) {
@@ -164,7 +231,7 @@ export const useBookStore = defineStore('books', {
 
           return true
         } else {
-          throw new Error('借阅失败：' + (response.data?.error || '未知错误'))
+          throw new Error('借阅失败：' + (data?.error || '未知错误'))
         }
       } catch (error) {
         this.error = error.message
@@ -181,7 +248,19 @@ export const useBookStore = defineStore('books', {
         // 调用后端归还API
         const response = await api.returnBook(bookId)
 
-        if (response.data && response.data.success) {
+        // 确保正确解析数据
+        let data = response.data
+        if (typeof data === 'string') {
+          try {
+            data = JSON.parse(data)
+          } catch (e) {
+            console.error('解析响应数据失败:', e)
+            this.error = '数据格式错误'
+            throw new Error('归还失败：无效的响应格式')
+          }
+        }
+
+        if (data && data.success) {
           // 更新本地库存和状态
           const bookIndex = this.books.findIndex(book => book.book_id === bookId)
           if (bookIndex !== -1) {
@@ -200,7 +279,7 @@ export const useBookStore = defineStore('books', {
 
           return true
         } else {
-          throw new Error('归还失败：' + (response.data?.error || '未知错误'))
+          throw new Error('归还失败：' + (data?.error || '未知错误'))
         }
       } catch (error) {
         this.error = error.message

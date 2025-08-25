@@ -74,6 +74,11 @@ const handleResponse = (response) => {
   return response;
 };
 
+// 封装请求方法
+const request = (options) => {
+  return apiInstance(options);
+};
+
 // API函数集合
 const api = {
   // 用户认证API
@@ -114,6 +119,14 @@ const api = {
   returnBook: (bookId) =>
     apiInstance.post(`/books/${bookId}/return`),
 
+  // 预约借阅
+  reserveBook: (bookId, data) =>
+    apiInstance.post(`/books/${bookId}/reserve`, data),
+
+  // 提前归还
+  returnBookEarly: (bookId) =>
+    apiInstance.post(`/books/${bookId}/return-early`),
+
   // 上传相关API
   getUploadUrl: (fileName, fileType) =>
     apiInstance.get(`/presigned-url?file_name=${fileName}&file_type=${fileType}`),
@@ -121,6 +134,9 @@ const api = {
   // 借阅记录API
   getUserBorrows: () =>
     apiInstance.get('/user/borrows'),
+
+  getBorrowRecords: () =>
+    apiInstance.get('/borrows'),
 
   // 批量归还API
   batchReturnBooks: (data) =>
@@ -130,9 +146,67 @@ const api = {
   returnBookByBorrowId: (borrowId) =>
     apiInstance.post(`/return/${borrowId}`),
 
-  // AI聊天API - 新增
+  // AI聊天API
   sendAIMessage: (message) =>
     apiInstance.post('/ai/chat', { message }),
+
+  // 收藏相关API
+  addFavorite: (bookId) =>
+    apiInstance.post(`/favorites/${bookId}`),
+
+  removeFavorite: (bookId) =>
+    apiInstance.delete(`/favorites/${bookId}`),
+
+  checkFavorite: (bookId) =>
+    apiInstance.get(`/favorites/${bookId}/check`),
+
+  getFavorites: () =>
+    apiInstance.get('/favorites'),
+
+  // 浏览历史API
+  getViewHistory: () =>
+    apiInstance.get('/history'),
+
+  // 公告API
+  getAnnouncements: () =>
+    apiInstance.get('/announcements'),
+
+  // 用户信息API - 采用增加版的request格式
+  getCurrentUser: () => {
+    return request({
+      url: '/user/current',
+      method: 'GET'
+    })
+  },
+
+  // 更新用户信息API方法
+  updateUserProfile: (data, isFormData = false) => {
+    const config = {
+      url: '/user/profile',
+      method: 'PUT'
+    }
+
+    if (isFormData) {
+      config.data = data
+      config.headers = {
+        'Content-Type': 'multipart/form-data'
+      }
+    } else {
+      config.data = data
+    }
+
+    return request(config)
+  },
+
+  // 评论相关API
+  getBookComments: (bookId) =>
+    apiInstance.get(`/books/${bookId}/comments`),
+
+  createComment: (bookId, data) =>
+    apiInstance.post(`/books/${bookId}/comments`, data),
+
+  likeComment: (commentId) =>
+    apiInstance.post(`/comments/${commentId}/like`),
 };
 
 export default api;

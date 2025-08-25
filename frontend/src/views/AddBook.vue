@@ -26,13 +26,25 @@
       <el-row :gutter="20">
         <el-col :span="12">
           <el-form-item label="书名" prop="title">
-            <el-input v-model="bookForm.title" placeholder="请输入书名" />
+            <el-input
+              v-model="bookForm.title"
+              placeholder="请输入书名"
+              :clearable="true"
+              show-word-limit
+              maxlength="100"
+            />
           </el-form-item>
         </el-col>
 
         <el-col :span="12">
           <el-form-item label="作者" prop="author">
-            <el-input v-model="bookForm.author" placeholder="请输入作者" />
+            <el-input
+              v-model="bookForm.author"
+              placeholder="请输入作者"
+              :clearable="true"
+              show-word-limit
+              maxlength="50"
+            />
           </el-form-item>
         </el-col>
       </el-row>
@@ -40,13 +52,24 @@
       <el-row :gutter="20">
         <el-col :span="12">
           <el-form-item label="出版社" prop="publisher">
-            <el-input v-model="bookForm.publisher" placeholder="请输入出版社" />
+            <el-input
+              v-model="bookForm.publisher"
+              placeholder="请输入出版社"
+              :clearable="true"
+              show-word-limit
+              maxlength="100"
+            />
           </el-form-item>
         </el-col>
 
         <el-col :span="12">
           <el-form-item label="ISBN" prop="isbn">
-            <el-input v-model="bookForm.isbn" placeholder="请输入ISBN" />
+            <el-input
+              v-model="bookForm.isbn"
+              placeholder="请输入ISBN"
+              :clearable="true"
+              maxlength="20"
+            />
           </el-form-item>
         </el-col>
       </el-row>
@@ -60,6 +83,7 @@
               :precision="2"
               placeholder="请输入价格"
               class="w-full"
+              controls-position="right"
             />
           </el-form-item>
         </el-col>
@@ -71,13 +95,14 @@
               :min="1"
               placeholder="请输入库存数量"
               class="w-full"
+              controls-position="right"
             />
           </el-form-item>
         </el-col>
       </el-row>
 
       <el-form-item label="分类" prop="category">
-        <el-select v-model="bookForm.category" placeholder="请选择分类" style="width: 100%">
+        <el-select v-model="bookForm.category" placeholder="请选择分类" style="width: 100%" :clearable="true">
           <el-option
             v-for="category in categories"
             :key="category.value"
@@ -87,12 +112,27 @@
         </el-select>
       </el-form-item>
 
+      <!-- 添加图书概述字段 -->
+      <el-form-item label="图书概述" prop="summary">
+        <el-input
+          v-model="bookForm.summary"
+          type="textarea"
+          :rows="3"
+          placeholder="请输入图书概述"
+          resize="none"
+          show-word-limit
+          maxlength="500"
+          :clearable="true"
+        />
+      </el-form-item>
+
       <el-form-item label="描述" prop="description">
         <el-input
           v-model="bookForm.description"
           type="textarea"
           :rows="4"
           placeholder="请输入图书描述"
+          :clearable="true"
         />
       </el-form-item>
 
@@ -126,6 +166,7 @@ const bookForm = ref({
   stock: 1,
   category: '',
   description: '',
+  summary: '', // 添加图书概述字段
   status: 'available'
 })
 
@@ -183,6 +224,7 @@ const submitForm = async () => {
       stock: Number(bookForm.value.stock),
       category: bookForm.value.category,
       description: bookForm.value.description,
+      summary: bookForm.value.summary, // 添加图书概述
       status: 'available'
     }
 
@@ -214,6 +256,7 @@ const resetForm = () => {
     stock: 1,
     category: '',
     description: '',
+    summary: '', // 重置时也清空图书概述
     status: 'available'
   }
 }
@@ -241,5 +284,31 @@ const goBack = () => {
 
 .w-full {
   width: 100%;
+}
+
+/* 添加确保表单项显示的样式 */
+.el-form-item {
+  margin-bottom: 20px;
+}
+
+.el-input, .el-select, .el-input-number {
+  width: 100%;
+}
+
+/* 确保表单元素可见 */
+:deep(.el-input__inner) {
+  visibility: visible !important;
+}
+
+:deep(.el-textarea__inner) {
+  visibility: visible !important;
+}
+
+:deep(.el-select) {
+  visibility: visible !important;
+}
+
+:deep(.el-input-number) {
+  visibility: visible !important;
 }
 </style>

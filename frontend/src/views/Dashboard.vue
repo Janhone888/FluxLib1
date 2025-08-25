@@ -40,13 +40,14 @@
         <el-card>
           <template #header>
             <div class="flex-between">
-              <h3>我的借阅记录</h3>
+              <h3>借阅记录</h3>
               <el-link type="primary" :underline="false" @click="goToBorrows">查看全部</el-link>
             </div>
           </template>
 
-          <el-table :data="myBorrows" v-if="myBorrows.length > 0" style="width: 100%">
+          <el-table :data="borrowRecords" v-if="borrowRecords.length > 0" style="width: 100%">
             <el-table-column prop="book_title" label="图书名称" />
+            <el-table-column prop="borrower" label="借阅人" />
             <el-table-column prop="borrow_date" label="借阅日期" width="180">
               <template #default="{ row }">
                 {{ formatDate(row.borrow_date) }}
@@ -67,8 +68,7 @@
           </el-table>
 
           <div v-else class="empty-tip">
-            <p>您还没有借过书</p>
-            <el-button type="text" @click="goToBooks">去借书</el-button>
+            <p>暂无借阅记录</p>
           </div>
         </el-card>
       </el-col>
@@ -77,7 +77,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import * as echarts from 'echarts'
 import dayjs from 'dayjs'
@@ -92,18 +92,18 @@ const stats = ref([
   { title: '逾期未还', value: 18, icon: 'el-icon-warning', color: '#f5222d' }
 ])
 
-const myBorrows = ref([])
+const borrowRecords = ref([])
 
 onMounted(() => {
   initCharts()
-  fetchMyBorrows()
+  fetchBorrowRecords()
 })
 
-const fetchMyBorrows = async () => {
+const fetchBorrowRecords = async () => {
   try {
-    const response = await api.getUserBorrows()
-    // 假设返回的数据结构为 { data: { items: [...] } }
-    myBorrows.value = (response.data.items || []).slice(0, 5) // 只取最近5条
+    // 获取所有借阅记录
+    const response = await api.getBorrowRecords()
+    borrowRecords.value = (response.data.items || []).slice(0, 5) // 只取最近5条
   } catch (error) {
     console.error('获取借阅记录失败', error)
   }
@@ -224,11 +224,6 @@ const initCharts = () => {
 // 跳转到借阅管理
 const goToBorrows = () => {
   router.push('/borrows')
-}
-
-// 跳转到图书列表
-const goToBooks = () => {
-  router.push('/books')
 }
 </script>
 

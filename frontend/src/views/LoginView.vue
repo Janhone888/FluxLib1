@@ -49,6 +49,15 @@
         <!-- 登录表单 -->
         <div v-if="activeTab === 'login'" class="login-form">
           <h2>用户登录</h2>
+
+          <!-- 添加登录类型选择 -->
+          <div class="login-type">
+            <el-radio-group v-model="loginType">
+              <el-radio label="user">普通用户</el-radio>
+              <el-radio label="admin">管理员</el-radio>
+            </el-radio-group>
+          </div>
+
           <el-form ref="loginForm" :model="loginForm" :rules="loginRules">
             <el-form-item prop="email">
               <el-input
@@ -67,6 +76,16 @@
                 prefix-icon="Lock"
                 size="large"
                 show-password
+              />
+            </el-form-item>
+
+            <!-- 管理员码输入框 -->
+            <el-form-item v-if="loginType === 'admin'" prop="adminCode">
+              <el-input
+                v-model="loginForm.adminCode"
+                placeholder="请输入管理员码"
+                prefix-icon="Key"
+                size="large"
               />
             </el-form-item>
 
@@ -189,6 +208,9 @@ const getRandomVideo = () => {
   return cityVideos[randomIndex]
 }
 
+// 添加登录类型
+const loginType = ref('user')
+
 onMounted(() => {
   currentVideo.value = getRandomVideo()
 
@@ -207,19 +229,9 @@ const countdown = ref(0)
 // 登录表单
 const loginForm = reactive({
   email: '',
-  password: ''
+  password: '',
+  adminCode: '' // 新增管理员码字段
 })
-
-const loginRules = {
-  email: [
-    { required: true, message: '请输入邮箱', trigger: 'blur' },
-    { type: 'email', message: '请输入有效的邮箱地址', trigger: ['blur', 'change'] }
-  ],
-  password: [
-    { required: true, message: '请输入密码', trigger: 'blur' },
-    { min: 6, message: '密码长度至少为6位', trigger: 'blur' }
-  ]
-}
 
 // 注册表单
 const registerForm = reactive({
@@ -228,6 +240,25 @@ const registerForm = reactive({
   password: '',
   confirmPassword: ''
 })
+
+// 修改登录规则
+const loginRules = {
+  email: [
+    { required: true, message: '请输入邮箱', trigger: 'blur' },
+    { type: 'email', message: '请输入有效的邮箱地址', trigger: ['blur', 'change'] }
+  ],
+  password: [
+    { required: true, message: '请输入密码', trigger: 'blur' },
+    { min: 6, message: '密码长度至少为6位', trigger: 'blur' }
+  ],
+  adminCode: [
+    {
+      required: loginType.value === 'admin',
+      message: '请输入管理员码',
+      trigger: 'blur'
+    }
+  ]
+}
 
 const registerRules = {
   email: [
@@ -284,18 +315,52 @@ const startCountdown = () => {
   }, 1000)
 }
 
-// 登录处理
+// 修改后的登录处理函数
 const handleLogin = async () => {
   try {
     loading.value = true
-    await userStore.login({
+
+    // 根据登录类型构建请求数据
+    const loginData = {
       email: loginForm.email,
       password: loginForm.password
-    })
+    }
+
+    // 如果是管理员登录，添加管理员码
+    if (loginType.value === 'admin') {
+      loginData.admin_code = loginForm.adminCode
+    }
+
+    console.log("登录请求数据:", loginData)
+
+    const response = await api.login(loginData)
+    console.log("登录响应:", response.data)
+
+    // 存储用户信息
+    userStore.token = response.data.token
+    userStore.userInfo = {
+      user_id: response.data.user_id,
+      email: response.data.email,
+      role: response.data.role,
+      is_admin: response.data.is_admin,
+      is_temporary_admin: response.data.is_temporary_admin // 存储临时管理员状态
+    }
+    userStore.isAuthenticated = true
+
+    localStorage.setItem('token', userStore.token)
+    localStorage.setItem('userInfo', JSON.stringify(userStore.userInfo))
+
     ElMessage.success('登录成功')
-    router.push('/dashboard')
+
+    // 根据用户角色跳转到不同页面
+    if (response.data.is_admin) {
+      router.push('/dashboard')
+    } else {
+      router.push('/home') // 普通用户首页
+    }
   } catch (error) {
-    ElMessage.error(`登录失败: ${error.message}`)
+    console.error("登录错误:", error)
+    ElMessage.error(`登录失败: ${error.response?.data?.error || error.message}`)
   } finally {
     loading.value = false
   }
@@ -487,6 +552,11 @@ h2 {
   font-size: 24px;
   color: white;
   font-weight: 500;
+}
+
+.login-type {
+  margin-bottom: 20px;
+  text-align: center;
 }
 
 :deep(.el-form-item) {

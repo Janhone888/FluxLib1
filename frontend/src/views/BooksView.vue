@@ -3,9 +3,16 @@
     <el-card class="box-card">
       <template #header>
         <div class="card-header">
-          <h2>图书管理</h2>
+          <h2>{{ userStore.userInfo.is_admin ? '图书管理' : '图书浏览' }}</h2>
           <div class="header-actions">
-            <el-button type="primary" icon="el-icon-circle-plus" @click="goToAdd">添加新书</el-button>
+            <el-button
+              v-if="userStore.userInfo.is_admin"
+              type="primary"
+              icon="el-icon-circle-plus"
+              @click="goToAdd"
+            >
+              添加新书
+            </el-button>
             <el-input
               v-model="searchQuery"
               placeholder="搜索图书..."
@@ -65,7 +72,7 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage } from 'element-plus'
 import { Picture } from '@element-plus/icons-vue'
 import { useBookStore } from '@/stores/books'
 import { useUserStore } from '@/stores/user'

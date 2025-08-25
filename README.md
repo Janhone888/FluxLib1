@@ -2,7 +2,7 @@
 
 FluxLib 泛集库是一个基于阿里云服务的全栈图书管理系统，采用前后端分离架构。系统提供图书管理、借阅归还、用户管理等功能，并集成AI智能助手，具有高性能、可扩展和安全的特点。
 
-可以使用外网点击https://book-mgmt-846jl11xs-janhones-projects.vercel.app，打开我们的网站。
+可以使用外网点击https://book-mgmt-7tfnxac15-janhones-projects.vercel.app，打开我们的网站。
 
 演示视频:https://pan.baidu.com/s/1evxzun-EKBhao4pP4Q1gWA?pwd=1234
 
@@ -16,6 +16,7 @@ FluxLib 泛集库是一个基于阿里云服务的全栈图书管理系统，采
 - JWT Token认证
 -  管理员账户自动创建
 - 角色权限控制（用户/管理员）
+- 用户个人信息管理（显示名称、头像、性别）
 
 
 
@@ -25,6 +26,7 @@ FluxLib 泛集库是一个基于阿里云服务的全栈图书管理系统，采
 - 多条件搜索（书名/作者/分类）
 - 图书封面管理（OSS存储）
 - 库存状态管理（可借/已借/维护中）
+- 图书概述和详细描述
 
 
 
@@ -34,6 +36,7 @@ FluxLib 泛集库是一个基于阿里云服务的全栈图书管理系统，采
 - 借阅期限选择（7/15/30天）
 - 借阅记录管理
 - 批量归还功能
+- 预约借阅功能
 
 
 
@@ -53,6 +56,14 @@ FluxLib 泛集库是一个基于阿里云服务的全栈图书管理系统，采
 - **借阅规则解答** - 解释借阅政策、期限和规则
 - **图书内容查询** - 基于图书描述回答相关问题
 - **多用户隔离** - 确保用户聊天记录完全隔离
+
+
+
+### 6.用户互动功能
+
+- 图书评论系统
+- 评论点赞功能
+- 回复评论功能
 
 
 
@@ -78,8 +89,6 @@ FluxLib 泛集库是一个基于阿里云服务的全栈图书管理系统，采
 - 图片卡片展示组件
 - 显示图书基本信息
 - 状态标签和库存显示
-
-
 
 ### 4.Chatbot.vue 
 
@@ -110,6 +119,7 @@ FluxLib 泛集库是一个基于阿里云服务的全栈图书管理系统，采
 - 图片详细信息展示
 - 借阅/归还功能
 - 借阅历史记录
+- 评论区功能
 
 ### 4.BorrowManage.vue
 
@@ -124,6 +134,24 @@ FluxLib 泛集库是一个基于阿里云服务的全栈图书管理系统，采
 - 分类分布饼图
 - 热门图书排行
 
+### 6.UserProfile.vue
+
+- 用户个人信息管理
+- 收藏列表展示
+- 浏览历史记录
+- 个人信息编辑(显示名称、头像、性别)
+
+### 7.EditBook.vue
+
+- 图书信息编辑页面
+- 支持所有图书字段编辑
+- 包含图书概述字段
+
+### 8. AddBook.vue
+
+- 添加新书页面
+- 表单验证和提交
+
 
 
 ## 数据库设计
@@ -137,6 +165,8 @@ FluxLib 泛集库是一个基于阿里云服务的全栈图书管理系统，采
 | author         | STRING  | 作者       |
 | publisher      | STRING  | 出版社     |
 | isbn           | STRING  | ISBN号     |
+| description    | STRING  | 详细描述   |
+| summary        | STRING  | 图书概述   |
 | price          | DOUBLE  | 价格       |
 | stock          | INTEGER | 库存数量   |
 | category       | STRING  | 分类       |
@@ -145,7 +175,7 @@ FluxLib 泛集库是一个基于阿里云服务的全栈图书管理系统，采
 | created_at     | INTEGER | 创建时间戳 |
 | updated_at     | INTEGER | 更新时间戳 |
 
-## 
+
 
 ### 用户表
 
@@ -157,6 +187,9 @@ FluxLib 泛集库是一个基于阿里云服务的全栈图书管理系统，采
 | Role           | STRING  | 角色        |
 | created_at     | INTEGER | I创建时间戳 |
 | is_verified    | STRING  | 验证状态    |
+| display_name   | STRING  | 显示名称    |
+| avatar_url     | STRING  | 头像URL     |
+| gender         | STRING  | 性别        |
 
 
 
@@ -171,6 +204,20 @@ FluxLib 泛集库是一个基于阿里云服务的全栈图书管理系统，采
 | due_date    | INTEGER | 应还日期   |
 | return_date | INTEGER | 归还日期   |
 | status      | STRING  | 状态       |
+
+
+
+### 评论表
+
+| 列名       | 类型    | 描述     |
+| :--------- | :------ | :------- |
+| comment_id | STRING  | 评论ID   |
+| book_id    | STRING  | 图书ID   |
+| user_id    | STRING  | 用户ID   |
+| parent_id  | STRING  | 父评论ID |
+| content    | STRING  | 评论内容 |
+| likes      | INTEGER | 点赞数   |
+| created_at | INTEGER | 创建时间 |
 
 
 
@@ -248,8 +295,6 @@ npm run dev
 ```
 
 前端应用将在 [http://localhost:3000](http://localhost:3000/) 启动
-
-
 
 
 
@@ -709,6 +754,129 @@ Authorization: Bearer <user_token>
 
 
 
+18.**更新用户个人信息**
+
+```text
+POST /user/profile
+```
+
+请求头:
+
+```json
+Authorization: Bearer <user_token>
+```
+
+请求体:
+
+- display_name: 显示名称
+- avatar: 头像文件
+- gender: 性别
+
+响应示例
+
+```json
+{
+  "success": true,
+  "message": "资料更新成功"
+}
+```
+
+
+
+19.**获取图书评论**
+
+```text
+GET /books/{book_id}/comments
+```
+
+响应示例:
+
+```json
+{
+  "items": [
+    {
+      "comment_id": "comment-001",
+      "book_id": "book-001",
+      "user_id": "user-001",
+      "user_display_name": "用户名",
+      "user_avatar_url": "https://example.com/avatar.jpg",
+      "content": "很好的书",
+      "likes": 5,
+      "created_at": 1634567890,
+      "replies": [
+        {
+          "comment_id": "comment-002",
+          "parent_id": "comment-001",
+          "user_id": "user-002",
+          "user_display_name": "另一个用户",
+          "user_avatar_url": "https://example.com/avatar2.jpg",
+          "content": "同意",
+          "likes": 2,
+          "created_at": 1634567990
+        }
+      ]
+    }
+  ]
+}
+```
+
+
+
+20.**创建评论**
+
+```text
+POST /books/{book_id}/comments
+```
+
+请求头:
+
+```json
+Authorization: Bearer <user_token>
+```
+
+请求体:
+
+```json
+{
+  "content": "评论内容",
+  "parent_id": "父评论ID(可选)"
+}
+```
+
+响应示例
+
+```json
+{
+  "success": true,
+  "comment_id": "new-comment-id"
+}
+```
+
+
+
+21.**点赞评论**
+
+```text
+POST /comments/{comment_id}/like
+```
+
+请求头:
+
+```json
+Authorization: Bearer <user_token>
+```
+
+响应示例
+
+```json
+{
+  "success": true,
+  "likes": 6
+}
+```
+
+
+
 ## 技术栈
 
 - **前端**: Vue3 + Pinia + Element Plus + Vite
@@ -716,3 +884,17 @@ Authorization: Bearer <user_token>
 - **AI服务**: DeepSeek技术驱动
 - **部署**: 阿里云函数计算（FC）、Vercel
 - **其他**: SMTP邮件服务（验证码）
+
+
+
+## 更新日志
+
+### 最新更新
+
+1. 添加了图书概述(summary)字段
+2. 添加了用户性别(gender)字段
+3. 修复了前端输入框隐藏的问题
+4. 增加了评论区功能
+5. 优化了API响应数据解析
+6. 添加了用户个人信息管理功能
+7. 改进了借阅权限控制（普通用户只能预约，管理员可以立即借阅）

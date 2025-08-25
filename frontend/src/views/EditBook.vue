@@ -31,13 +31,25 @@
             <el-row :gutter="20">
               <el-col :span="12">
                 <el-form-item label="书名" prop="title">
-                  <el-input v-model="bookForm.title" placeholder="请输入书名" />
+                  <el-input
+                    v-model="bookForm.title"
+                    placeholder="请输入书名"
+                    :clearable="true"
+                    show-word-limit
+                    maxlength="100"
+                  />
                 </el-form-item>
               </el-col>
 
               <el-col :span="12">
                 <el-form-item label="作者" prop="author">
-                  <el-input v-model="bookForm.author" placeholder="请输入作者" />
+                  <el-input
+                    v-model="bookForm.author"
+                    placeholder="请输入作者"
+                    :clearable="true"
+                    show-word-limit
+                    maxlength="50"
+                  />
                 </el-form-item>
               </el-col>
             </el-row>
@@ -45,13 +57,24 @@
             <el-row :gutter="20">
               <el-col :span="12">
                 <el-form-item label="出版社" prop="publisher">
-                  <el-input v-model="bookForm.publisher" placeholder="请输入出版社" />
+                  <el-input
+                    v-model="bookForm.publisher"
+                    placeholder="请输入出版社"
+                    :clearable="true"
+                    show-word-limit
+                    maxlength="100"
+                  />
                 </el-form-item>
               </el-col>
 
               <el-col :span="12">
                 <el-form-item label="ISBN" prop="isbn">
-                  <el-input v-model="bookForm.isbn" placeholder="请输入 ISBN" />
+                  <el-input
+                    v-model="bookForm.isbn"
+                    placeholder="请输入 ISBN"
+                    :clearable="true"
+                    maxlength="20"
+                  />
                 </el-form-item>
               </el-col>
             </el-row>
@@ -65,6 +88,7 @@
                     :precision="2"
                     placeholder="请输入价格"
                     class="w-full"
+                    controls-position="right"
                   />
                 </el-form-item>
               </el-col>
@@ -76,13 +100,19 @@
                     :min="0"
                     placeholder="请输入库存数量"
                     class="w-full"
+                    controls-position="right"
                   />
                 </el-form-item>
               </el-col>
             </el-row>
 
             <el-form-item label="分类" prop="category">
-              <el-select v-model="bookForm.category" placeholder="请选择分类" class="w-full">
+              <el-select
+                v-model="bookForm.category"
+                placeholder="请选择分类"
+                class="w-full"
+                :clearable="true"
+              >
                 <el-option
                   v-for="category in categories"
                   :key="category.value"
@@ -102,6 +132,20 @@
           </el-col>
         </el-row>
 
+        <!-- 添加图书概述字段 -->
+        <el-form-item label="图书概述" prop="summary">
+          <el-input
+            v-model="bookForm.summary"
+            type="textarea"
+            :rows="3"
+            placeholder="请输入图书概述"
+            resize="none"
+            show-word-limit
+            maxlength="500"
+            :clearable="true"
+          />
+        </el-form-item>
+
         <el-form-item label="图书描述" prop="description">
           <el-input
             v-model="bookForm.description"
@@ -109,6 +153,7 @@
             :rows="4"
             placeholder="请输入图书描述"
             resize="none"
+            :clearable="true"
           />
         </el-form-item>
 
@@ -181,7 +226,8 @@ const initialForm = {
   stock: 1,
   category: '',
   description: '',
-  status: 'available'
+  status: 'available',
+  summary: '' // 添加图书概述字段
 }
 
 const bookForm = ref({ ...initialForm })
@@ -236,8 +282,21 @@ onMounted(async () => {
       loading.value = true
       await bookStore.fetchBook(bookId.value)
 
+      // 确保正确填充表单数据
       if (bookStore.currentBook) {
-        bookForm.value = { ...bookStore.currentBook }
+        bookForm.value = {
+          cover: bookStore.currentBook.cover || '',
+          title: bookStore.currentBook.title || '',
+          author: bookStore.currentBook.author || '',
+          publisher: bookStore.currentBook.publisher || '',
+          isbn: bookStore.currentBook.isbn || '',
+          price: bookStore.currentBook.price || 0,
+          stock: bookStore.currentBook.stock || 1,
+          category: bookStore.currentBook.category || '',
+          description: bookStore.currentBook.description || '',
+          status: bookStore.currentBook.status || 'available',
+          summary: bookStore.currentBook.summary || ''  // 添加图书概述
+        }
       } else {
         ElMessage.warning('未找到该图书信息')
         goBack()
@@ -346,5 +405,31 @@ const goBack = () => {
 
 .mt-20 {
   margin-top: 20px;
+}
+
+/* 添加确保表单项显示的样式 */
+.el-form-item {
+  margin-bottom: 20px;
+}
+
+.el-input, .el-select, .el-input-number {
+  width: 100%;
+}
+
+/* 确保表单元素可见 */
+:deep(.el-input__inner) {
+  visibility: visible !important;
+}
+
+:deep(.el-textarea__inner) {
+  visibility: visible !important;
+}
+
+:deep(.el-select) {
+  visibility: visible !important;
+}
+
+:deep(.el-input-number) {
+  visibility: visible !important;
 }
 </style>
