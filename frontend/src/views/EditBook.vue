@@ -37,6 +37,7 @@
                     :clearable="true"
                     show-word-limit
                     maxlength="100"
+                    @input="(val) => debugInput('title', val)"
                   />
                 </el-form-item>
               </el-col>
@@ -49,6 +50,7 @@
                     :clearable="true"
                     show-word-limit
                     maxlength="50"
+                    @input="(val) => debugInput('author', val)"
                   />
                 </el-form-item>
               </el-col>
@@ -63,6 +65,7 @@
                     :clearable="true"
                     show-word-limit
                     maxlength="100"
+                    @input="(val) => debugInput('publisher', val)"
                   />
                 </el-form-item>
               </el-col>
@@ -74,6 +77,7 @@
                     placeholder="请输入 ISBN"
                     :clearable="true"
                     maxlength="20"
+                    @input="(val) => debugInput('isbn', val)"
                   />
                 </el-form-item>
               </el-col>
@@ -203,7 +207,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Check, Refresh, Close } from '@element-plus/icons-vue'
@@ -214,9 +218,8 @@ const route = useRoute()
 const router = useRouter()
 const bookStore = useBookStore()
 
-// 表单初始状态
-const initialForm = {
-  id: '',
+// 使用 reactive 创建响应式表单对象
+const bookForm = reactive({
   cover: '',
   title: '',
   author: '',
@@ -227,12 +230,8 @@ const initialForm = {
   category: '',
   description: '',
   status: 'available',
-  summary: '' // 添加图书概述字段
-}
-
-const bookForm = ref({ ...initialForm })
-const loading = ref(true)
-const submitting = ref(false)
+  summary: ''
+})
 
 const categories = ref([
   { value: 'computer', label: '计算机' },
@@ -266,64 +265,85 @@ const rules = ref({
   ]
 })
 
-// 借阅历史数据
-const borrowHistory = ref([
-  { id: 1, borrower: '张三', borrowDate: '2023-10-15', returnDate: '2023-11-15', status: '已归还', notes: '正常归还' },
-  { id: 2, borrower: '李四', borrowDate: '2023-10-20', returnDate: '2023-11-20', status: '借阅中', notes: '预计下周归还' },
-  { id: 3, borrower: '王五', borrowDate: '2023-09-28', returnDate: '2023-10-28', status: '逾期未还', notes: '已发送提醒邮件' }
-])
+const loading = ref(true)
+const submitting = ref(false)
 
 // 获取图书ID
 const bookId = computed(() => route.params.id)
 
+// 借阅历史数据
+const borrowHistory = ref([])
+
 onMounted(async () => {
   if (bookId.value) {
-    try {
-      loading.value = true
-      await bookStore.fetchBook(bookId.value)
-
-      // 确保正确填充表单数据
-      if (bookStore.currentBook) {
-        bookForm.value = {
-          cover: bookStore.currentBook.cover || '',
-          title: bookStore.currentBook.title || '',
-          author: bookStore.currentBook.author || '',
-          publisher: bookStore.currentBook.publisher || '',
-          isbn: bookStore.currentBook.isbn || '',
-          price: bookStore.currentBook.price || 0,
-          stock: bookStore.currentBook.stock || 1,
-          category: bookStore.currentBook.category || '',
-          description: bookStore.currentBook.description || '',
-          status: bookStore.currentBook.status || 'available',
-          summary: bookStore.currentBook.summary || ''  // 添加图书概述
-        }
-      } else {
-        ElMessage.warning('未找到该图书信息')
-        goBack()
-      }
-    } catch (error) {
-      ElMessage.error(`获取图书信息失败: ${error.message}`)
-    } finally {
-      loading.value = false
-    }
+    await fetchBookDetail()
   } else {
     ElMessage.warning('无效的图书ID')
     goBack()
   }
 })
 
+const fetchBookDetail = async () => {
+  try {
+    loading.value = true
+    await bookStore.fetchBook(bookId.value)
+
+    // 确保正确填充表单数据
+    if (bookStore.currentBook) {
+      // 逐个字段赋值，确保响应式更新
+      bookForm.cover = bookStore.currentBook.cover || ''
+      bookForm.title = bookStore.currentBook.title || ''
+      bookForm.author = bookStore.currentBook.author || ''
+      bookForm.publisher = bookStore.currentBook.publisher || ''
+      bookForm.isbn = bookStore.currentBook.isbn || ''
+      bookForm.price = bookStore.currentBook.price || 0
+      bookForm.stock = bookStore.currentBook.stock || 1
+      bookForm.category = bookStore.currentBook.category || ''
+      bookForm.description = bookStore.currentBook.description || ''
+      bookForm.status = bookStore.currentBook.status || 'available'
+      bookForm.summary = bookStore.currentBook.summary || ''
+
+      console.log("加载的图书数据:", bookForm)
+    } else {
+      ElMessage.warning('未找到该图书信息')
+      goBack()
+    }
+  } catch (error) {
+    ElMessage.error(`获取图书信息失败: ${error.message}`)
+  } finally {
+    loading.value = false
+  }
+}
+
 const submitForm = async () => {
   try {
     submitting.value = true
 
     // 数据验证
-    if (!bookForm.value.title || !bookForm.value.author) {
+    if (!bookForm.title || !bookForm.author) {
       ElMessage.warning('请填写必填字段')
       return
     }
 
+    // 创建更新数据对象
+    const updateData = {
+      cover: bookForm.cover,
+      title: bookForm.title,
+      author: bookForm.author,
+      publisher: bookForm.publisher,
+      isbn: bookForm.isbn,
+      price: Number(bookForm.price),
+      stock: Number(bookForm.stock),
+      category: bookForm.category,
+      description: bookForm.description,
+      summary: bookForm.summary,
+      status: bookForm.status
+    }
+
+    console.log("提交的更新数据:", JSON.stringify(updateData, null, 2))
+
     // 更新图书
-    await bookStore.updateBook(bookId.value, bookForm.value)
+    await bookStore.updateBook(bookId.value, updateData)
 
     ElMessage.success({
       message: '图书信息更新成功',
@@ -348,14 +368,21 @@ const resetForm = () => {
     confirmButtonText: '确定',
     cancelButtonText: '取消',
     type: 'warning'
-  }).then(() => {
-    bookForm.value = { ...bookStore.currentBook }
+  }).then(async () => {
+    // 重新获取原始数据
+    await fetchBookDetail()
     ElMessage.info('表单已重置')
   }).catch(() => {})
 }
 
 const goBack = () => {
   router.push('/books')
+}
+
+// 调试函数
+const debugInput = (field, value) => {
+  console.log(`输入字段 ${field}:`, value)
+  console.log(`bookForm.${field}:`, bookForm[field])
 }
 </script>
 
@@ -407,29 +434,11 @@ const goBack = () => {
   margin-top: 20px;
 }
 
-/* 添加确保表单项显示的样式 */
 .el-form-item {
   margin-bottom: 20px;
 }
 
 .el-input, .el-select, .el-input-number {
   width: 100%;
-}
-
-/* 确保表单元素可见 */
-:deep(.el-input__inner) {
-  visibility: visible !important;
-}
-
-:deep(.el-textarea__inner) {
-  visibility: visible !important;
-}
-
-:deep(.el-select) {
-  visibility: visible !important;
-}
-
-:deep(.el-input-number) {
-  visibility: visible !important;
 }
 </style>

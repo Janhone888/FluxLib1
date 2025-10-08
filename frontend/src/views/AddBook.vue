@@ -32,6 +32,7 @@
               :clearable="true"
               show-word-limit
               maxlength="100"
+              @input="(val) => debugInput('title', val)"
             />
           </el-form-item>
         </el-col>
@@ -44,6 +45,7 @@
               :clearable="true"
               show-word-limit
               maxlength="50"
+              @input="(val) => debugInput('author', val)"
             />
           </el-form-item>
         </el-col>
@@ -147,7 +149,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, reactive, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { useBookStore } from '@/stores/books'
@@ -156,7 +158,8 @@ import ImageUploader from '@/components/ImageUploader.vue'
 const router = useRouter()
 const bookStore = useBookStore()
 
-const bookForm = ref({
+// 使用 reactive 而不是 ref 来创建表单对象
+const bookForm = reactive({
   cover: '',
   title: '',
   author: '',
@@ -166,7 +169,7 @@ const bookForm = ref({
   stock: 1,
   category: '',
   description: '',
-  summary: '', // 添加图书概述字段
+  summary: '',
   status: 'available'
 })
 
@@ -208,23 +211,18 @@ const submitForm = async () => {
   try {
     submitting.value = true
 
-    // 确保封面URL是字符串
-    if (typeof bookForm.value.cover !== 'string') {
-      bookForm.value.cover = ''
-    }
-
     // 创建纯数据对象
     const bookData = {
-      cover: bookForm.value.cover,
-      title: bookForm.value.title,
-      author: bookForm.value.author,
-      publisher: bookForm.value.publisher,
-      isbn: bookForm.value.isbn,
-      price: Number(bookForm.value.price),
-      stock: Number(bookForm.value.stock),
-      category: bookForm.value.category,
-      description: bookForm.value.description,
-      summary: bookForm.value.summary, // 添加图书概述
+      cover: bookForm.cover,
+      title: bookForm.title,
+      author: bookForm.author,
+      publisher: bookForm.publisher,
+      isbn: bookForm.isbn,
+      price: Number(bookForm.price),
+      stock: Number(bookForm.stock),
+      category: bookForm.category,
+      description: bookForm.description,
+      summary: bookForm.summary,
       status: 'available'
     }
 
@@ -246,7 +244,7 @@ const submitForm = async () => {
 }
 
 const resetForm = () => {
-  bookForm.value = {
+  Object.assign(bookForm, {
     cover: '',
     title: '',
     author: '',
@@ -256,13 +254,19 @@ const resetForm = () => {
     stock: 1,
     category: '',
     description: '',
-    summary: '', // 重置时也清空图书概述
+    summary: '',
     status: 'available'
-  }
+  })
 }
 
 const goBack = () => {
   router.push('/books')
+}
+
+// 添加调试代码来检查输入问题
+const debugInput = (field, value) => {
+  console.log(`输入字段 ${field}:`, value)
+  console.log(`bookForm.${field}:`, bookForm[field])
 }
 </script>
 
@@ -286,7 +290,6 @@ const goBack = () => {
   width: 100%;
 }
 
-/* 添加确保表单项显示的样式 */
 .el-form-item {
   margin-bottom: 20px;
 }
@@ -295,20 +298,5 @@ const goBack = () => {
   width: 100%;
 }
 
-/* 确保表单元素可见 */
-:deep(.el-input__inner) {
-  visibility: visible !important;
-}
-
-:deep(.el-textarea__inner) {
-  visibility: visible !important;
-}
-
-:deep(.el-select) {
-  visibility: visible !important;
-}
-
-:deep(.el-input-number) {
-  visibility: visible !important;
-}
+/* 移除所有 visibility 相关的强制样式，只保留必要的样式 */
 </style>

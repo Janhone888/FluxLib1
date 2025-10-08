@@ -118,7 +118,7 @@ export const useBookStore = defineStore('books', {
       }
     },
 
-    // 更新图书信息
+    // 更新图书信息（已按要求修正）
     async updateBook(id, bookData) {
       this.loading = true
       try {
@@ -137,9 +137,14 @@ export const useBookStore = defineStore('books', {
         }
 
         if (data) {
-          const index = this.books.findIndex(book => book.id === id)
+          // 更新本地数据：将匹配字段从 book.id 改为 book.book_id
+          const index = this.books.findIndex(book => book.book_id === id)
           if (index !== -1) {
             this.books[index] = { ...this.books[index], ...bookData }
+          }
+          // 新增：同步更新当前查看的图书状态（currentBook）
+          if (this.currentBook && this.currentBook.book_id === id) {
+            this.currentBook = { ...this.currentBook, ...bookData }
           }
           return data
         } else {

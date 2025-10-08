@@ -10,7 +10,7 @@ FluxLib 泛集库是一个基于阿里云核心服务构建的全栈图书管理
 
 
 
-由于前端部署在Vercel，后端部署在阿里云函数计算，需要使用外网点击https://book-mgmt-7tfnxac15-janhones-projects.vercel.app，打开我们的网站。
+由于前端部署在Vercel，后端部署在阿里云函数计算，需要使用外网点击https://book-mgmt-5tj4p9p3m-janhones-projects.vercel.app，打开我们的网站。
 
 演示视频:https://pan.baidu.com/s/1evxzun-EKBhao4pP4Q1gWA?pwd=1234（1.0版本,2.0版本暂未录制)
 
