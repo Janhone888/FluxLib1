@@ -118,90 +118,48 @@ class Book:
 
     @classmethod
     def get_list(cls, page=1, size=10, category=''):
-        """获取图书列表（修复起始主键问题）"""
+        """获取图书列表（简化分页逻辑：查询所有后内存分页，按创建时间倒序）"""
         try:
             logger.info(f"📚 Book.get_list() 开始: page={page}, size={size}, category='{category}'")
 
-            # 1. 计算分页偏移
+            # 1. 计算分页偏移（基础分页参数）
             offset = (page - 1) * size
-            result = []
-            # 重要修复：始终从 INF_MIN 开始查询
-            next_start_pk = [('book_id', INF_MIN)]
+            book_list = []
 
-            logger.info(f"📐 分页参数: offset={offset}, limit={size}")
-            logger.info(f"📍 起始主键: {next_start_pk}")
-
-            # 2. 分类过滤条件
+            # 2. 分类过滤条件（保留原版过滤逻辑）
             column_filter = None
             if category:
                 column_filter = SingleColumnCondition('category', category, ComparatorType.EQUAL)
                 logger.info(f"🎯 分类过滤: {category}")
 
-            # 3. 循环获取数据
-            batch_count = 0
-            total_scanned = 0
+            # 3. 简化查询：直接获取所有符合条件的图书（替换原多批次查询逻辑）
+            all_books = ots_get_range(
+                OTS_TABLE_NAME,
+                start_pk=[('book_id', INF_MIN)],
+                end_pk=[('book_id', INF_MAX)],
+                column_filter=column_filter
+            )
 
-            while next_start_pk and len(result) < size:
-                batch_count += 1
-                logger.info(f"🔄 第 {batch_count} 批次查询, next_start_pk={next_start_pk}")
+            logger.info(f"📊 查询到总记录数: {len(all_books)}")
 
-                # 调用OTS范围查询
-                batch = ots_get_range(
-                    OTS_TABLE_NAME,
-                    start_pk=next_start_pk,
-                    end_pk=[('book_id', INF_MAX)],
-                    column_filter=column_filter,
-                    limit=size * 3  # 多取一些数据来处理偏移
-                )
+            if not all_books:
+                logger.info("📭 无图书数据")
+                return [], 0
 
-                logger.info(f"📦 批次 {batch_count} 获取到 {len(batch)} 条记录")
-                total_scanned += len(batch)
+            # 4. 按创建时间倒序（新增排序，确保新书优先展示）
+            all_books.sort(key=lambda x: x.get('created_at', 0), reverse=True)
 
-                if not batch:
-                    logger.info("📭 无更多数据，终止循环")
-                    break
+            # 5. 内存分页（简化版分页逻辑，直接截取区间）
+            start_index = offset
+            end_index = offset + size
+            paged_books = all_books[start_index:end_index]
 
-                # 处理偏移：跳过前offset条
-                if offset > 0:
-                    logger.info(f"⏩ 需要跳过 {offset} 条记录，当前批次有 {len(batch)} 条")
-                    if len(batch) <= offset:
-                        offset -= len(batch)
-                        # 更新下一批次起始主键
-                        if batch:
-                            next_start_pk = [('book_id', batch[-1]['book_id'])]
-                        else:
-                            next_start_pk = None
-                        logger.info(f"⏭️ 跳过整个批次，剩余offset={offset}")
-                        continue
-                    else:
-                        # 截取偏移后的部分
-                        batch = batch[offset:]
-                        offset = 0  # 偏移处理完成
-                        logger.info(f"✅ 偏移处理完成，剩余批次长度: {len(batch)}")
+            logger.info(f"📄 分页结果: 起始索引={start_index}, 结束索引={end_index}, 本页数量={len(paged_books)}")
 
-                # 收集结果（确保不超过size）
-                take = min(size - len(result), len(batch))
-                if take > 0:
-                    result.extend(batch[:take])
-                    logger.info(f"📥 收集 {take} 条记录，当前总数: {len(result)}")
-                else:
-                    logger.info("📥 无需收集更多记录")
-
-                # 更新下一批次起始主键
-                if batch and len(result) < size:
-                    next_start_pk = [('book_id', batch[-1]['book_id'])]
-                    logger.info(f"➡️ 下一批次起始主键: {next_start_pk}")
-                else:
-                    next_start_pk = None
-                    logger.info("🏁 无下一批次")
-
-            # 4. 转换为Book对象并校准字段类型
-            book_list = []
-            logger.info(f"🔄 开始转换 {len(result)} 条记录为Book对象")
-
-            for i, book_data in enumerate(result):
+            # 6. 转换为Book对象并校准字段类型（保留原版类型处理）
+            for i, book_data in enumerate(paged_books):
                 try:
-                    # 校准stock和price类型
+                    # 校准stock（int）和price（float）类型，避免数据类型异常
                     if 'stock' in book_data:
                         book_data['stock'] = int(book_data['stock'])
                     if 'price' in book_data:
@@ -210,17 +168,15 @@ class Book:
                     book_obj = cls(book_data)
                     book_list.append(book_obj)
 
-                    logger.info(f"✅ 转换成功: {book_obj.title} (ID: {book_obj.book_id})")
+                    logger.info(f"✅ 转换成功 {i + 1}: {book_obj.title} (ID: {book_obj.book_id})")
 
                 except Exception as e:
                     logger.error(f"❌ 转换图书数据失败: {book_data}, 错误: {str(e)}")
 
-            # 5. 获取总数
-            logger.info("🔢 开始获取图书总数...")
-            total = cls.get_total(category)
-            logger.info(f"📊 图书总数: {total}")
+            # 7. 直接用查询结果长度作为总数（无需额外统计）
+            total = len(all_books)
+            logger.info(f"📊 最终返回: {len(book_list)} 本书, 总数: {total}")
 
-            logger.info(f"🎉 最终返回: {len(book_list)} 本书, 总数: {total}, 扫描了 {total_scanned} 条记录")
             return book_list, total
 
         except Exception as e:
