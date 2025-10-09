@@ -1,10 +1,11 @@
 import hashlib
 import time
-from tablestore import (  # 补充导入INF_MIN、INF_MAX，解决范围查询的常量引用问题
+from tablestore import (
     SingleColumnCondition, ComparatorType, INF_MIN, INF_MAX
 )
 from config import logger, USERS_TABLE, ADMIN_CODE
 from utils.database import ots_get_row, ots_get_range
+from utils.redis_client import redis_client  # 导入Redis客户端
 
 
 def hash_password(password):
@@ -13,30 +14,39 @@ def hash_password(password):
 
 
 def get_user_id_by_token(token):
-    """通过Token获取用户ID（原代码逻辑：扫描用户表匹配user_id）"""
+    """通过Token获取用户ID - Redis优化版"""
     try:
-        # 条件：user_id等于token
-        condition = SingleColumnCondition(
-            'user_id',
-            token,
-            ComparatorType.EQUAL
-        )
-        # 范围查询用户表（主键email从最小到最大，INF_MIN/INF_MAX已正常导入）
+        # 1. 先查Redis缓存
+        cached_user_id = redis_client.get_user_by_token(token)
+        if cached_user_id:
+            logger.info(f"✅ Redis缓存命中: token={token}")
+            return cached_user_id
+
+        # 2. 缓存未命中，查询OTS
+        condition = SingleColumnCondition('user_id', token, ComparatorType.EQUAL)
         user_list = ots_get_range(
             USERS_TABLE,
-            start_pk=[('email', INF_MIN)],  # 已导入INF_MIN，可正常使用
-            end_pk=[('email', INF_MAX)],    # 已导入INF_MAX，可正常使用
+            start_pk=[('email', INF_MIN)],
+            end_pk=[('email', INF_MAX)],
             column_filter=condition,
             limit=1
         )
+
         if user_list:
             user = user_list[0]
-            logger.info(f"通过Token找到用户: email={user.get('email')}, user_id={user.get('user_id')}")
-            return user.get('user_id')
+            user_id = user.get('user_id')
+
+            # 3. 写入Redis缓存
+            redis_client.set_token_user(token, user_id)
+            redis_client.set_user(user_id, user)
+
+            logger.info(f"✅ OTS查询成功并缓存: user_id={user_id}")
+            return user_id
+
         logger.warning(f"未找到匹配Token的用户: token={token}")
         return None
     except Exception as e:
-        logger.error(f"通过Token获取用户ID失败: {str(e)}", exc_info=True)
+        logger.error(f"❌ 获取用户ID失败: {str(e)}", exc_info=True)
         return None
 
 
@@ -66,26 +76,45 @@ def verify_admin_code(input_code):
 
 
 def get_user_by_id(user_id):
-    """通过用户ID获取用户信息（原代码逻辑：扫描用户表匹配user_id）"""
+    """通过用户ID获取用户信息 - 增加Redis缓存优化"""
     try:
-        # 条件：user_id等于指定值
+        # 1. 先查Redis缓存
+        cached_user = redis_client.get_user(user_id)
+        if cached_user:
+            logger.info(f"✅ Redis缓存命中: user_id={user_id}")
+            return {
+                'email': cached_user.get('email'),
+                'user_id': cached_user.get('user_id'),
+                'password': cached_user.get('password'),
+                'role': cached_user.get('role', 'user'),
+                'display_name': cached_user.get('display_name'),
+                'avatar_url': cached_user.get('avatar_url'),
+                'gender': cached_user.get('gender', ''),
+                'created_at': cached_user.get('created_at'),
+                'updated_at': cached_user.get('updated_at')
+            }
+
+        # 2. 缓存未命中，查询OTS
         condition = SingleColumnCondition(
             'user_id',
             user_id,
             ComparatorType.EQUAL
         )
-        # 范围查询用户表（INF_MIN/INF_MAX已正常导入）
         user_list = ots_get_range(
             USERS_TABLE,
-            start_pk=[('email', INF_MIN)],  # 已导入INF_MIN，可正常使用
-            end_pk=[('email', INF_MAX)],    # 已导入INF_MAX，可正常使用
+            start_pk=[('email', INF_MIN)],
+            end_pk=[('email', INF_MAX)],
             column_filter=condition,
             limit=1
         )
+
         if user_list:
             user = user_list[0]
-            logger.info(f"通过ID找到用户: email={user.get('email')}, role={user.get('role')}")
-            # 确保返回字段完整（与原代码一致）
+
+            # 3. 写入Redis缓存
+            redis_client.set_user(user_id, user)
+
+            logger.info(f"✅ OTS查询成功并缓存: user_id={user_id}")
             return {
                 'email': user.get('email'),
                 'user_id': user.get('user_id'),
@@ -97,22 +126,38 @@ def get_user_by_id(user_id):
                 'created_at': user.get('created_at'),
                 'updated_at': user.get('updated_at')
             }
+
         logger.warning(f"未找到用户: user_id={user_id}")
         return None
     except Exception as e:
-        logger.error(f"通过用户ID获取用户信息失败: {str(e)}", exc_info=True)
+        logger.error(f"❌ 通过用户ID获取用户信息失败: {str(e)}", exc_info=True)
         return None
 
 
 def get_user_by_email(email):
-    """通过邮箱获取用户信息（原代码get_user函数逻辑）"""
+    """通过邮箱获取用户信息 - 增加Redis缓存优化"""
     try:
+        # 1. 先查Redis缓存
+        cached_user = redis_client.get_user_by_email(email)
+        if cached_user:
+            logger.info(f"✅ Redis缓存命中: email={email}")
+            return cached_user
+
+        # 2. 缓存未命中，查询OTS
         user = ots_get_row(USERS_TABLE, primary_key=[('email', email)])
+
         if not user:
             logger.info(f"用户不存在: email={email}")
             return None
-        logger.info(f"通过邮箱获取用户成功: email={email}")
+
+        # 3. 写入Redis缓存
+        user_id = user.get('user_id')
+        if user_id:
+            redis_client.set_user(user_id, user)
+            redis_client.set_user_by_email(email, user)
+
+        logger.info(f"✅ OTS查询成功并缓存: email={email}")
         return user
     except Exception as e:
-        logger.error(f"通过邮箱获取用户失败: {str(e)}", exc_info=True)
+        logger.error(f"❌ 通过邮箱获取用户失败: {str(e)}", exc_info=True)
         return None
