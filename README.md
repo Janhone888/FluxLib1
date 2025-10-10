@@ -1,6 +1,6 @@
 ## FluxLib泛集库
 
-![f2fc046b71aed54fc2f4ecb0ab142188](C:\Users\86188\Documents\GitHub\FluxLib1\picture\f2fc046b71aed54fc2f4ecb0ab142188.png)
+![image](https://github.com/Janhone888/FluxLib1/blob/main/picture/f2fc046b71aed54fc2f4ecb0ab142188.png)
 
 FluxLib 泛集库是一个基于阿里云核心服务构建的全栈图书管理系统，采用前后端分离架构，后端以 Flask 为开发框架，前端基于 Vue3+Element Plus 开发。
 
