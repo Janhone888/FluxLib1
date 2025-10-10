@@ -1,5 +1,7 @@
 ## FluxLib泛集库
 
+![](C:\Users\86188\Desktop\全球化\8898c33d89b3a2d57c8d1a3d1fa5d9c5.png)
+
 FluxLib 泛集库是一个基于阿里云核心服务构建的全栈图书管理系统，采用前后端分离架构，后端以 Flask 为开发框架，前端基于 Vue3+Element Plus 开发。
 
 该系统核心功能聚焦图书管理全场景，提供**图书全生命周期管理**（增删改查、分类筛选、封面 OSS 存储）、**借阅归还体系**（普通用户预约借阅、管理员立即借阅、单本 / 批量归还、提前归还标记，管理员登陆页面与用户登陆所看到的页面不一样）、**精细化用户管理**（邮箱验证码注册、角色权限控制、个人信息编辑）。
@@ -10,9 +12,12 @@ FluxLib 泛集库是一个基于阿里云核心服务构建的全栈图书管理
 
 
 
-由于前端部署在Vercel，后端部署在阿里云函数计算，需要使用外网点击https://book-mgmt-5tj4p9p3m-janhones-projects.vercel.app，打开我们的网站。
+由于前端部署在Vercel，后端部署在阿里云函数计算，需要使用外网点击https://book-mgmt-o4nkxr3fe-janhones-projects.vercel.app，打开我们的网站。
 
-演示视频:https://pan.baidu.com/s/1evxzun-EKBhao4pP4Q1gWA?pwd=1234（1.0版本,2.0版本暂未录制)
+蓝湖地址：https://lanhuapp.com/link/#/invite?sid=qXdn4qCa
+分享人: 微信用户Ws4G
+团队名称: 微信用户IOX6的团队的团队
+相关项目: FluxLib泛集库
 
 
 
