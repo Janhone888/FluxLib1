@@ -143,6 +143,39 @@ class User:
         logger.info(f"更新用户信息成功: email={self.email}")
         return True, None
 
+    def update_password(self, new_password):
+        """更新用户密码"""
+        if not self.email:
+            logger.error("更新密码失败: 缺少email主键")
+            return False, "用户不存在"
+
+        # 对新密码进行哈希
+        from utils.auth import hash_password
+        hashed_pw = hash_password(new_password)
+
+        # 更新密码和updated_at
+        self.password = hashed_pw
+        self.updated_at = int(time.time())
+
+        # 调用OTS更新
+        primary_key = [('email', self.email)]
+        update_columns = [
+            ('password', self.password),
+            ('updated_at', self.updated_at)
+        ]
+        success, err = ots_put_row(
+            USERS_TABLE,
+            primary_key,
+            update_columns,
+            expect_exist=RowExistenceExpectation.IGNORE
+        )
+        if not success:
+            logger.error(f"更新密码失败: email={self.email}, err={err}")
+            return False, str(err)
+
+        logger.info(f"更新密码成功: email={self.email}")
+        return True, None
+
     @classmethod
     def create_admin(cls):
         """创建默认管理员（对应原代码create_admin_user逻辑）"""

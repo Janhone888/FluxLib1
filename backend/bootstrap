@@ -1,23 +1,62 @@
 #!/bin/bash
 set -euo pipefail
 
-# 设置超时时间（秒）
-INSTALL_TIMEOUT=60
+CUSTOM_DEP_PATH="/code/python"
+PYTHON_EXEC="python3"
+REQUIRED_DEPS=("redis" "Cryptodome" "cryptography" "oss2" "aliyunsdkcore" "cffi")
 
-# 安装依赖（带超时控制）
-if [ -f "requirements.txt" ]; then
-    echo "开始安装依赖..."
-    timeout $INSTALL_TIMEOUT pip3 install -r requirements.txt -t . || {
-        echo "依赖安装超时，跳过安装直接启动"
-    }
+# -------------------------- 1. 先检查关键依赖是否存在，再清理 --------------------------
+echo "=== 第一步：检查依赖并清理残留 ==="
+# 先检查所有必需依赖（包括 cryptography）是否存在
+for dep in "${REQUIRED_DEPS[@]}"; do
+    dep_full_path="${CUSTOM_DEP_PATH}/${dep}"
+    if [ ! -d "${dep_full_path}" ]; then
+        echo "❌ 依赖 [${dep}] 缺失！预期路径：${dep_full_path}"
+        exit 1
+    fi
+    echo "✅ 依赖 [${dep}] 已找到，路径：${dep_full_path}"
+done
+
+# 现在再清理残留（此时 cryptography 已存在，不会报错）
+rm -rf "${CUSTOM_DEP_PATH}/cryptography.libs"
+find "${CUSTOM_DEP_PATH}/cryptography" -name "_rust.so" -delete 2>/dev/null  # 加 2>/dev/null 忽略无文件的情况
+rm -rf "${CUSTOM_DEP_PATH}/Crypto" "${CUSTOM_DEP_PATH}/enum"
+echo "✅ 残留清理完成"
+
+# -------------------------- 2. 版本验证 --------------------------
+echo -e "\n=== 第二步：验证依赖版本 ==="
+# 验证 cryptography 版本
+CRYPTOGRAPHY_VERSION=$(${PYTHON_EXEC} -c "import sys; sys.path.insert(0, '${CUSTOM_DEP_PATH}'); import cryptography; print(cryptography.__version__)")
+if [ "${CRYPTOGRAPHY_VERSION}" != "2.9.2" ]; then
+    echo "❌ cryptography 版本错误！当前：${CRYPTOGRAPHY_VERSION}，需 2.9.2"
+    exit 1
+else
+    echo "✅ cryptography 版本正确（2.9.2）"
 fi
 
-# 强制卸载冲突的包
-pip uninstall -y enum34
+# 验证 pycryptodomex 无原生模块
+if find "${CUSTOM_DEP_PATH}/Cryptodome" -name "*.so" | grep -q .; then
+    echo "❌ Cryptodome 下存在原生模块，请重新安装 pycryptodomex==3.9.9 --no-binary"
+    exit 1
+else
+    echo "✅ pycryptodomex 是纯 Python 版本"
+fi
 
-# 设置环境变量
-export PYTHONPATH=/opt/python:/code:${PYTHONPATH:-}
+# 验证 cffi 模块
+CFFI_SO_PATH="${CUSTOM_DEP_PATH}/cffi/_cffi_backend.cpython-39-x86_64-linux-gnu.so"
+if [ -f "${CFFI_SO_PATH}" ]; then
+    chmod +x "${CFFI_SO_PATH}"
+    echo "✅ cffi 扩展模块准备完成"
+else
+    echo "❌ cffi .so 文件缺失！路径：${CFFI_SO_PATH}"
+    exit 1
+fi
 
-# 启动应用
-echo "启动应用..."
-exec python3 main.py
+# -------------------------- 3. 启动应用 --------------------------
+echo -e "\n=== 第三步：启动应用 ==="
+if [ ! -f "/code/main.py" ]; then
+    echo "❌ 未找到 /code/main.py"
+    exit 1
+fi
+echo "🚀 启动应用：${PYTHON_EXEC} /code/main.py"
+exec "${PYTHON_EXEC}" /code/main.py

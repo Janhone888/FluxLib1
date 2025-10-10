@@ -12,7 +12,7 @@ def send_verification_email(email):
         logger.error("发送验证码失败: 缺少邮箱")
         return False, "邮箱是必填项"
 
-    # 调用邮件工具发送验证码
+    # 调用邮件工具发送注册验证码（默认类型为register）
     success = send_verification_code(email)
     if not success:
         return False, "发送验证码失败"
@@ -20,22 +20,38 @@ def send_verification_email(email):
 
 
 def verify_registration_code(email, code):
-    """验证注册验证码（对应原代码verify_code逻辑）"""
+    """验证注册验证码（兼容原有逻辑，内部调用新的验证函数）"""
+    return verify_code_with_type(email, code, 'register')
+
+
+def verify_reset_code(email, code):
+    """验证重置密码验证码（独立验证，不涉及密码重置）"""
+    return verify_code_with_type(email, code, 'reset_password')
+
+
+def verify_code_with_type(email, code, code_type='register'):
+    """验证验证码（支持不同类型：register/reset_password）"""
     if not email or not code:
         logger.error("验证验证码失败: 邮箱或验证码为空")
         return False, "邮箱和验证码是必填项"
 
-    # 从OTS获取验证码
+    # 从OTS获取验证码（包含类型字段）
     code_data = ots_get_row(
         VERIFICATION_CODES_TABLE,
         primary_key=[('email', email)],
-        columns_to_get=['code', 'expire_time']
+        columns_to_get=['code', 'type', 'expire_time']  # 获取类型字段用于校验
     )
     if not code_data:
-        logger.warning(f"验证码记录不存在: email={email}")
+        logger.warning(f"验证码记录不存在: email={email}, type={code_type}")
         return False, "验证码错误或已过期"
 
-    # 校验验证码和有效期
+    # 校验验证码类型是否匹配
+    stored_type = code_data.get('type', 'register')  # 默认register保持向后兼容
+    if stored_type != code_type:
+        logger.warning(f"验证码类型不匹配: email={email}, 期望={code_type}, 实际={stored_type}")
+        return False, "验证码类型错误"
+
+    # 校验验证码内容和有效期
     stored_code = code_data.get('code')
     expire_time = code_data.get('expire_time', 0)
     current_time = int(time.time())
@@ -48,14 +64,14 @@ def verify_registration_code(email, code):
         logger.warning(f"验证码已过期: email={email}, 过期时间={expire_time}, 当前时间={current_time}")
         return False, "验证码已过期"
 
-    logger.info(f"验证码验证成功: email={email}")
+    logger.info(f"验证码验证成功: email={email}, type={code_type}")
     return True, "验证码验证成功"
 
 
 def register_user(email, password, code, gender=None):
     """用户注册（对应原代码register_user逻辑）"""
-    # 1. 验证验证码
-    verify_success, verify_msg = verify_registration_code(email, code)
+    # 1. 验证注册验证码（复用类型验证函数）
+    verify_success, verify_msg = verify_code_with_type(email, code, 'register')
     if not verify_success:
         return False, verify_msg
 
@@ -107,3 +123,45 @@ def login_user(email, password, admin_code=None):
     }
     logger.info(f"用户登录成功: email={email}, 角色={login_data['role']}")
     return True, login_data
+
+
+def send_reset_password_code(email):
+    """发送重置密码验证码（指定类型为reset_password）"""
+    if not email:
+        logger.error("发送重置密码验证码失败: 缺少邮箱")
+        return False, "邮箱是必填项"
+
+    # 检查邮箱是否已注册
+    user = User.get_by_email(email)
+    if not user:
+        return False, "该邮箱未注册，请先注册账号"
+
+    # 调用邮件工具发送验证码（明确指定类型为reset_password）
+    success = send_verification_code(email, 'reset_password')
+    if not success:
+        return False, "发送验证码失败"
+    return True, "验证码已发送至邮箱"
+
+
+def reset_password(email, code, new_password):
+    """重置密码（使用类型验证确保安全性）"""
+    if not email or not code or not new_password:
+        logger.error("重置密码失败: 邮箱、验证码或新密码为空")
+        return False, "邮箱、验证码和新密码是必填项"
+
+    # 验证验证码（明确指定类型为reset_password）
+    verify_success, verify_msg = verify_code_with_type(email, code, 'reset_password')
+    if not verify_success:
+        return False, verify_msg
+
+    # 获取用户并更新密码
+    user = User.get_by_email(email)
+    if not user:
+        return False, "用户不存在"
+
+    success, err = user.update_password(new_password)
+    if not success:
+        return False, err
+
+    logger.info(f"重置密码成功: email={email}")
+    return True, "密码重置成功"
