@@ -81,7 +81,7 @@ const request = (options) => {
 
 // API函数集合
 const api = {
-  // 用户认证API
+  // 用户认证API（新增忘记密码相关API在此分类下）
   sendVerificationCode: (email) =>
     apiInstance.post('/send-verification-code', { email }),
 
@@ -90,6 +90,17 @@ const api = {
 
   login: (credentials) =>
     apiInstance.post('/login', credentials),
+
+  // 新增：忘记密码相关API
+  sendResetCode: (email) =>
+    apiInstance.post('/forgot-password/send-code', { email }),
+
+  // 新增：验证重置密码验证码接口
+  verifyResetCode: (data) =>
+    apiInstance.post('/forgot-password/verify-code', data),
+
+  resetPassword: (data) =>
+    apiInstance.post('/forgot-password/reset', data),
 
   // 图书相关API
   getBooks: (page = 1, size = 10, category = '') => {
