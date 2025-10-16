@@ -94,7 +94,14 @@ def register_comments_routes(bp):
             success, result = comment.like_comment()
 
             if success:
-                return jsonify({'success': True, 'likes': comment.likes}), 200
+                # ✅ 重新加载完整评论数据（包含用户信息）
+                updated_comment = Comment.get_by_id(comment_id)
+                return jsonify({
+                    'success': True,
+                    'likes': updated_comment.likes,
+                    'user_display_name': updated_comment.user_display_name,
+                    'user_avatar_url': updated_comment.user_avatar_url
+                }), 200
             else:
                 return jsonify({'error': result}), 400
 

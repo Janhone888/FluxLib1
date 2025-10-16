@@ -168,15 +168,71 @@ const api = {
   removeFavorite: (bookId) =>
     apiInstance.delete(`/favorites/${bookId}`),
 
-  checkFavorite: (bookId) =>
-    apiInstance.get(`/favorites/${bookId}/check`),
+  // 检查收藏状态API - 修复响应处理
+  checkFavorite: (bookId) => {
+    return request({
+      url: `/favorites/${bookId}/check`,
+      method: 'GET'
+    }).then(response => {
+      // 处理嵌套的body结构
+      if (response.data && response.data.body) {
+        try {
+          return {
+            ...response,
+            data: JSON.parse(response.data.body)
+          };
+        } catch (e) {
+          console.error('解析收藏状态失败:', e);
+          return response;
+        }
+      }
+      return response;
+    });
+  },
 
-  getFavorites: () =>
-    apiInstance.get('/favorites'),
+  // 收藏相关API - 修复响应处理
+  getFavorites: () => {
+    return request({
+      url: '/favorites',
+      method: 'GET'
+    }).then(response => {
+      // 处理嵌套的body结构
+      if (response.data && response.data.body) {
+        try {
+          return {
+            ...response,
+            data: JSON.parse(response.data.body)
+          };
+        } catch (e) {
+          console.error('解析收藏数据失败:', e);
+          return response;
+        }
+      }
+      return response;
+    });
+  },
 
-  // 浏览历史API
-  getViewHistory: () =>
-    apiInstance.get('/history'),
+  // 浏览历史API - 修复响应处理
+  getViewHistory: () => {
+    return request({
+      url: '/history',
+      method: 'GET'
+    }).then(response => {
+      // 处理嵌套的body结构
+      if (response.data && response.data.body) {
+        try {
+          return {
+            ...response,
+            data: JSON.parse(response.data.body)
+          };
+        } catch (e) {
+          console.error('解析浏览历史数据失败:', e);
+          return response;
+        }
+      }
+      return response;
+    });
+  },
 
   // 公告API
   getAnnouncements: () =>

@@ -19,8 +19,8 @@ from config import (
 )
 
 # -------------------------- OTS配置（修改版：完全对齐1.docx固定值）--------------------------
-# ① 对齐1.docx：固定endpoint和实例名，不可修改；密钥从环境变量获取
-OTS_ENDPOINT = "https://book-mgmt-ots.cn-hangzhou.ots.aliyuncs.com"  # 与1.docx一致
+# ① 对齐1.docx：固定endpoint和实例名，不可修改；密钥从环境变量获取（已修正：移除末尾空格）
+OTS_ENDPOINT = "https://book-mgmt-ots.cn-hangzhou.ots.aliyuncs.com"  # 与1.docx一致，无末尾空格
 OTS_INSTANCE_NAME = "book-mgmt-ots"  # 与1.docx一致
 ALIYUN_ACCESS_KEY = os.getenv("ALIYUN_ACCESS_KEY")
 ALIYUN_ACCESS_SECRET = os.getenv("ALIYUN_ACCESS_SECRET")
@@ -166,14 +166,17 @@ def ots_get_row(table_name, primary_key, columns_to_get=None):
         return None
 
 
-def ots_get_range(table_name, start_pk, end_pk, column_filter=None, limit=100):
-    """OTS范围查询（修复空结果处理）"""
+def ots_get_range(table_name, start_pk, end_pk, column_filter=None, limit=100, column_to_get=None):
+    """OTS范围查询（修复：补充columns_to_get参数传递，支持指定字段查询）"""
     try:
         result = []
         next_start_pk = start_pk
 
         logger.info(f"🔍 OTS范围查询: table={table_name}, start_pk={start_pk}, limit={limit}")
+        # 新增日志：打印待查询的字段列表，确认参数传递正确
+        logger.info(f"📋 待查询的字段列表: {column_to_get}")
 
+        # 核心修复：补充 columns_to_get=column_to_get，将指定字段列表传递给OTS
         consumed, next_start_pk, row_list, next_token = ots_client.get_range(
             table_name,
             'FORWARD',
@@ -181,10 +184,11 @@ def ots_get_range(table_name, start_pk, end_pk, column_filter=None, limit=100):
             end_pk,
             limit=limit,
             max_version=1,
-            column_filter=column_filter
+            column_filter=column_filter,
+            columns_to_get=column_to_get  # ✅ 修复点：传递指定字段列表
         )
 
-        # 转换每一行为字典
+        # 转换每一行为字典（原有逻辑不变）
         for row in row_list:
             row_data = {}
             # 提取主键

@@ -14,7 +14,7 @@ def hash_password(password):
 
 
 def get_user_id_by_token(token):
-    """通过Token获取用户ID - Redis优化版"""
+    """通过Token获取用户ID - Redis优化版（新增user_id空值校验）"""
     try:
         # 1. 先查Redis缓存
         cached_user_id = redis_client.get_user_by_token(token)
@@ -36,14 +36,20 @@ def get_user_id_by_token(token):
             user = user_list[0]
             user_id = user.get('user_id')
 
-            # 3. 写入Redis缓存
+            # 新增：user_id空值校验，避免缓存无效数据
+            if not user_id:
+                user_email = user.get('email', '未知邮箱')
+                logger.error(f"❌ 用户记录缺失user_id: email={user_email}, token={token}")
+                return None
+
+            # 3. 写入Redis缓存（仅在user_id有效时执行）
             redis_client.set_token_user(token, user_id)
             redis_client.set_user(user_id, user)
 
             logger.info(f"✅ OTS查询成功并缓存: user_id={user_id}")
             return user_id
 
-        logger.warning(f"未找到匹配Token的用户: token={token}")
+        logger.warning(f"⚠️ 未找到匹配Token的用户: token={token}")
         return None
     except Exception as e:
         logger.error(f"❌ 获取用户ID失败: {str(e)}", exc_info=True)
@@ -60,18 +66,18 @@ def get_current_user_id(headers):
         user_id = get_user_id_by_token(token)
         if user_id:
             return user_id
-        logger.warning("无效或过期的Token")
+        logger.warning("⚠️ 无效或过期的Token")
         return None
-    logger.warning("Authorization头缺失或格式错误（需Bearer Token）")
+    logger.warning("⚠️ Authorization头缺失或格式错误（需Bearer Token）")
     return None
 
 
 def verify_admin_code(input_code):
     """验证管理员码（与原代码一致）"""
     if input_code == ADMIN_CODE:
-        logger.info("管理员码验证成功")
+        logger.info("✅ 管理员码验证成功")
         return True
-    logger.warning(f"管理员码验证失败: 输入={input_code}, 正确={ADMIN_CODE}")
+    logger.warning(f"⚠️ 管理员码验证失败: 输入={input_code}, 正确={ADMIN_CODE}")
     return False
 
 
@@ -127,7 +133,7 @@ def get_user_by_id(user_id):
                 'updated_at': user.get('updated_at')
             }
 
-        logger.warning(f"未找到用户: user_id={user_id}")
+        logger.warning(f"⚠️ 未找到用户: user_id={user_id}")
         return None
     except Exception as e:
         logger.error(f"❌ 通过用户ID获取用户信息失败: {str(e)}", exc_info=True)
@@ -147,7 +153,7 @@ def get_user_by_email(email):
         user = ots_get_row(USERS_TABLE, primary_key=[('email', email)])
 
         if not user:
-            logger.info(f"用户不存在: email={email}")
+            logger.info(f"⚠️ 用户不存在: email={email}")
             return None
 
         # 3. 写入Redis缓存
