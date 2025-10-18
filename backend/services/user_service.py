@@ -74,7 +74,7 @@ def update_user_profile(headers, data, is_form_data=False):
                 'body': json.dumps({'error': '用户不存在'})
             }
 
-        # 2. 处理可更新字段（仅头像/名字/性别，避免参数错误）
+        # 2. 处理可更新字段（仅头像/名字/性别/背景图，避免参数错误）
         update_data = {}
         if is_form_data:
             # 表单数据：优先用传入值，无则用原始值
@@ -93,6 +93,11 @@ def update_user_profile(headers, data, is_form_data=False):
                 update_data['avatar_url'] = oss_res['body']['access_url']
             else:
                 update_data['avatar_url'] = getattr(original_user, 'avatar_url', '')
+            # 处理background_url字段
+            update_data['background_url'] = data['background_url'].strip() if (
+                        data.get('background_url') and data['background_url'].strip()) else getattr(original_user,
+                                                                                                    'background_url',
+                                                                                                    '')
         else:
             # JSON数据：同上逻辑
             update_data['display_name'] = data['display_name'].strip() if (
@@ -101,9 +106,12 @@ def update_user_profile(headers, data, is_form_data=False):
             update_data['gender'] = data['gender'] if data.get('gender') else getattr(original_user, 'gender', '')
             update_data['avatar_url'] = data['avatar_url'] if data.get('avatar_url') else getattr(original_user,
                                                                                                   'avatar_url', '')
+            # 处理background_url字段
+            update_data['background_url'] = data['background_url'] if data.get('background_url') else getattr(
+                original_user, 'background_url', '')
 
-        # 3. 执行更新（仅传3个字段，避免参数错误）
-        success, err = original_user.update_profile(**update_data)
+        # 3. 执行更新（仅传允许的字段，避免参数错误）
+        success, err = original_user.update_profile(** update_data)
         if not success:
             return {
                 'statusCode': 400,
@@ -119,6 +127,7 @@ def update_user_profile(headers, data, is_form_data=False):
             'display_name': getattr(updated_user, 'display_name', ''),
             'avatar_url': getattr(updated_user, 'avatar_url', ''),
             'gender': getattr(updated_user, 'gender', ''),
+            'background_url': getattr(updated_user, 'background_url', ''),  # 新增background_url字段
             # 核心字段：强制显式返回，即使模型没查到也有默认值
             'is_verified': getattr(updated_user, 'is_verified', False),
             'password': getattr(updated_user, 'password', ''),

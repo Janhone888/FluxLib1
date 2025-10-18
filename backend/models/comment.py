@@ -4,6 +4,8 @@ from config import logger, COMMENTS_TABLE
 from utils.database import ots_put_row, ots_get_row, ots_get_range
 from tablestore import SingleColumnCondition, ComparatorType, INF_MIN, INF_MAX, RowExistenceExpectation
 from models.user import User
+# 新增：导入CommentLike模型
+from models.comment_like import CommentLike
 
 
 class Comment:
@@ -168,50 +170,66 @@ class Comment:
             return None
         return cls(data)
 
-    def like_comment(self):
-        """点赞评论（对应原代码like_comment逻辑）"""
+    def like_comment(self, user_id):
+        """点赞/取消点赞评论（修复：不更新原作者信息）"""
         if not self.comment_id:
-            logger.error("点赞评论失败: 缺少comment_id主键")
+            logger.error("点赞失败：缺少comment_id")
             return False, "评论不存在"
+        if not user_id:
+            logger.error("点赞失败：缺少user_id")
+            return False, "用户未登录"
 
-        # 1. 增加点赞数 + 更新时间（原有逻辑不变）
-        self.likes += 1
-        self.updated_at = int(time.time())
+        try:
+            # 1. 检查用户是否已点赞
+            has_liked = CommentLike.exists(self.comment_id, user_id)
+            if has_liked:
+                # 2. 已点赞：取消点赞（删记录+点赞数-1）
+                del_success, del_err = CommentLike.delete(self.comment_id, user_id)
+                if not del_success:
+                    return False, del_err
+                self.likes -= 1
+                action = "取消点赞"
+            else:
+                # 3. 未点赞：点赞（增记录+点赞数+1）
+                create_success, create_err = CommentLike.create(self.comment_id, user_id)
+                if not create_success:
+                    return False, create_err
+                self.likes += 1
+                action = "点赞"
 
-        # 2. 重新加载用户信息（原有逻辑不变）
-        user = User.get_by_id(self.user_id)
-        if user:
-            self.user_display_name = user.display_name or user.email.split('@')[0]
-            self.user_avatar_url = user.avatar_url
+            # 4. ✅ 关键修改：删除错误的"加载点赞用户信息"逻辑，保留评论原作者信息
+            current_book_id = self.book_id
+            current_content = self.content
+            current_user_display_name = self.user_display_name  # 直接获取原作者显示名
+            current_user_avatar_url = self.user_avatar_url      # 直接获取原作者头像
 
-        # -------------------------- 核心修复：补充 book_id 和 content 字段 --------------------------
-        # 从当前 Comment 实例中获取原有值（点赞前已通过 __init__ 加载，非空）
-        current_book_id = self.book_id
-        current_content = self.content
-        # 新增日志：验证保留的字段值
-        logger.info(f"【点赞保留字段】book_id={current_book_id}, content={current_content[:20]}...")
-        # ------------------------------------------------------------------------------------------
+            # 5. 更新OTS评论表（仅更新点赞数、时间，保留原作者信息）
+            primary_key = [('comment_id', self.comment_id)]
+            update_columns = [
+                ('likes', self.likes),
+                ('updated_at', int(time.time())),
+                ('user_display_name', current_user_display_name),  # 写入原作者信息
+                ('user_avatar_url', current_user_avatar_url),      # 写入原作者信息
+                ('book_id', current_book_id),
+                ('content', current_content)
+            ]
+            success, err = ots_put_row(
+                COMMENTS_TABLE,
+                primary_key,
+                update_columns,
+                expect_exist=RowExistenceExpectation.IGNORE
+            )
+            if not success:
+                # 回滚：恢复点赞记录（避免数据不一致）
+                if has_liked:
+                    CommentLike.create(self.comment_id, user_id)
+                    self.likes += 1
+                else:
+                    CommentLike.delete(self.comment_id, user_id)
+                    self.likes -= 1
+                return False, str(err)
 
-        # 3. 调用OTS更新（补充 book_id 和 content，避免字段丢失）
-        primary_key = [('comment_id', self.comment_id)]
-        update_columns = [
-            ('likes', self.likes),
-            ('updated_at', self.updated_at),
-            ('user_display_name', self.user_display_name),  # 原有字段
-            ('user_avatar_url', self.user_avatar_url),  # 原有字段
-            # ✅ 新增：保留点赞前的 book_id 和 content，防止被清空
-            ('book_id', current_book_id),
-            ('content', current_content)
-        ]
-        success, err = ots_put_row(
-            COMMENTS_TABLE,
-            primary_key,
-            update_columns,
-            expect_exist=RowExistenceExpectation.IGNORE
-        )
-        if not success:
-            logger.error(f"点赞评论失败: comment_id={self.comment_id}, err={err}")
-            return False, str(err)
-
-        logger.info(f"点赞评论成功: comment_id={self.comment_id}, 点赞数={self.likes}")
-        return True, None
+            return True, {"likes": self.likes, "action": action}
+        except Exception as e:
+            logger.error(f"点赞操作异常：err={str(e)}")
+            return False, str(e)

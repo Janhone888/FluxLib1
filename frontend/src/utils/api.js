@@ -138,7 +138,7 @@ const api = {
   returnBookEarly: (bookId) =>
     apiInstance.post(`/books/${bookId}/return-early`),
 
-  // 上传相关API
+  // 上传相关API（对应补充的获取OSS上传链接接口）
   getUploadUrl: (fileName, fileType) =>
     apiInstance.get(`/presigned-url?file_name=${fileName}&file_type=${fileType}`),
 
@@ -161,10 +161,11 @@ const api = {
   sendAIMessage: (message) =>
     apiInstance.post('/ai/chat', { message }),
 
-  // 收藏相关API
+  // 收藏相关API（整合补充的获取收藏列表、取消收藏接口，保留统一响应处理）
   addFavorite: (bookId) =>
     apiInstance.post(`/favorites/${bookId}`),
 
+  // 取消收藏（Favorites.vue用，对应后端/favorites/:bookId接口）
   removeFavorite: (bookId) =>
     apiInstance.delete(`/favorites/${bookId}`),
 
@@ -190,7 +191,7 @@ const api = {
     });
   },
 
-  // 收藏相关API - 修复响应处理
+  // 获取收藏列表（Favorites.vue和UserProfile用，对应后端/favorites接口）
   getFavorites: () => {
     return request({
       url: '/favorites',
@@ -212,7 +213,7 @@ const api = {
     });
   },
 
-  // 浏览历史API - 修复响应处理
+  // 浏览历史API（History.vue和UserProfile用，对应后端/history接口）
   getViewHistory: () => {
     return request({
       url: '/history',
@@ -238,7 +239,8 @@ const api = {
   getAnnouncements: () =>
     apiInstance.get('/announcements'),
 
-  // 用户信息API - 采用增加版的request格式
+  // 用户信息API（整合补充的获取当前用户信息、更新用户资料接口）
+  // 获取当前用户信息（UserProfile用，对应后端/user/current接口）
   getCurrentUser: () => {
     return request({
       url: '/user/current',
@@ -246,7 +248,7 @@ const api = {
     })
   },
 
-  // 更新用户信息API方法
+  // 更新用户资料（UserProfile编辑用，含背景图、头像，对应后端/user/profile接口）
   updateUserProfile: (data, isFormData = false) => {
     const config = {
       url: '/user/profile',

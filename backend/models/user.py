@@ -33,6 +33,8 @@ class User:
             f"https://api.dicebear.com/7.x/initials/svg?seed={self.display_name or 'User'}"
         )
         self.gender = data.get('gender', '')  # 性别（可修改，允许空值）
+        self.background_url = data.get('background_url', '')  # 新增背景图字段
+        self.summary = data.get('summary', '')  # 个人简介字段
 
     @classmethod
     def create_user(cls, email, password, gender=None):
@@ -62,7 +64,9 @@ class User:
             'is_verified': False,  # 新用户默认未验证（后续通过邮箱验证修改）
             'display_name': email.split('@')[0] if (email and '@' in email) else email,
             'avatar_url': f"https://api.dicebear.com/7.x/initials/svg?seed={email.split('@')[0] if (email and '@' in email) else 'User'}",
-            'gender': gender or ''
+            'gender': gender or '',
+            'background_url': '',  # 新用户默认背景图为空
+            'summary': ''  # 新用户默认个人简介为空
         }
 
         # 4. 写入OTS（Users表）- 明确包含所有核心字段，避免缺失
@@ -76,7 +80,9 @@ class User:
             ('is_verified', user_data['is_verified']),
             ('display_name', user_data['display_name']),
             ('avatar_url', user_data['avatar_url']),
-            ('gender', user_data['gender'])
+            ('gender', user_data['gender']),
+            ('background_url', user_data['background_url']),  # 新增字段写入
+            ('summary', user_data['summary'])  # 个人简介字段写入
         ]
         success, err = ots_put_row(
             USERS_TABLE,
@@ -121,7 +127,7 @@ class User:
         # 初始化User实例（使用查询到的完整数据）
         return cls(user_list[0])
 
-    def update_profile(self, display_name=None, avatar_url=None, gender=None):
+    def update_profile(self, display_name=None, avatar_url=None, gender=None, background_url=None, summary=None):
         """更新用户资料（核心修复：强制携带所有核心字段，避免OTS覆盖清空）"""
         # 1. 校验主键：email为空无法定位用户
         if not self.email:
@@ -154,6 +160,16 @@ class User:
             self.gender = gender
             update_columns.append(('gender', self.gender))
             logger.debug(f"待更新字段: gender={self.gender}")
+        # 背景图URL：允许为空（用户可取消设置）
+        if background_url is not None:
+            self.background_url = background_url
+            update_columns.append(('background_url', self.background_url))
+            logger.debug(f"待更新字段: background_url={self.background_url}")
+        # 个人简介：允许为空（用户可清空）
+        if summary is not None:
+            self.summary = summary
+            update_columns.append(('summary', self.summary))
+            logger.debug(f"待更新字段: summary={self.summary}")
 
         # 3.2 强制添加「核心不可修改字段」（从数据库读取最新值，避免被清空）
         # 这些字段用户无法修改，但必须传递给OTS，否则会被覆盖删除
@@ -224,7 +240,9 @@ class User:
             ('created_at', current_user_data.get('created_at', current_timestamp)),
             ('display_name', current_user_data.get('display_name', '')),
             ('avatar_url', current_user_data.get('avatar_url', '')),
-            ('gender', current_user_data.get('gender', ''))
+            ('gender', current_user_data.get('gender', '')),
+            ('background_url', current_user_data.get('background_url', '')),  # 保留背景图字段
+            ('summary', current_user_data.get('summary', ''))  # 保留个人简介字段
         ]
 
         # 5. 写入OTS
@@ -279,7 +297,9 @@ class User:
             'is_verified': True,  # 默认已验证
             'display_name': '管理员',
             'avatar_url': "https://api.dicebear.com/7.x/initials/svg?seed=Admin",
-            'gender': ''
+            'gender': '',
+            'background_url': '',  # 管理员默认背景图为空
+            'summary': '系统管理员账号'  # 管理员默认个人简介
         }
 
         # 写入OTS
@@ -293,7 +313,9 @@ class User:
             ('is_verified', admin_data['is_verified']),
             ('display_name', admin_data['display_name']),
             ('avatar_url', admin_data['avatar_url']),
-            ('gender', admin_data['gender'])
+            ('gender', admin_data['gender']),
+            ('background_url', admin_data['background_url']),  # 新增字段写入
+            ('summary', admin_data['summary'])  # 个人简介字段写入
         ]
         success, err = ots_put_row(
             USERS_TABLE,

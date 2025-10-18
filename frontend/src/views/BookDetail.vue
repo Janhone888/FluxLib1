@@ -210,25 +210,69 @@
             </div>
           </div>
 
-          <!-- 回复列表 -->
-          <div v-if="comment.replies && comment.replies.length > 0" class="replies-list">
-            <div v-for="reply in comment.replies" :key="reply.comment_id" class="reply-item">
-              <div class="reply-header">
-                <el-avatar :size="32" :src="reply.user_avatar_url" />
-                <div class="reply-author">
-                  <div class="author-name">{{ reply.user_display_name }}</div>
-                  <div class="reply-time">{{ formatTime(reply.created_at) }}</div>
+          <!-- 回复列表（修改后） -->
+          <div v-if="comment.replies && comment.replies.length > 0" class="replies-section">
+            <!-- 回复数量提示 -->
+            <div class="replies-count" v-if="!comment.showReplies && comment.replies.length > 0">
+              <span class="count-text">共{{ comment.replies.length }}条回复</span>
+              <el-button
+                link
+                @click="toggleReplies(comment)"
+                class="toggle-replies-btn"
+              >
+                {{ comment.showReplies ? '收起回复' : '展开回复' }}
+              </el-button>
+            </div>
+
+            <!-- 回复列表 -->
+            <div v-if="comment.showReplies" class="replies-list">
+              <!-- 显示的回复 -->
+              <div
+                v-for="reply in comment.replies.slice(0, comment.visibleRepliesCount)"
+                :key="reply.comment_id"
+                class="reply-item"
+              >
+                <div class="reply-header">
+                  <el-avatar :size="32" :src="reply.user_avatar_url" />
+                  <div class="reply-author">
+                    <div class="author-name">{{ reply.user_display_name }}</div>
+                    <div class="reply-time">{{ formatTime(reply.created_at) }}</div>
+                  </div>
+                </div>
+
+                <div class="reply-content">
+                  {{ reply.content }}
+                </div>
+
+                <div class="reply-actions">
+                  <el-button link @click="likeComment(reply.comment_id)">
+                    <el-icon><Star /></el-icon>
+                    点赞 ({{ reply.likes }})
+                  </el-button>
                 </div>
               </div>
 
-              <div class="reply-content">
-                {{ reply.content }}
+              <!-- 展开更多回复按钮 -->
+              <div v-if="comment.hasMoreReplies" class="show-more-replies">
+                <el-button
+                  link
+                  @click="showMoreReplies(comment)"
+                  class="more-replies-btn"
+                >
+                  <el-icon><ArrowDown /></el-icon>
+                  展开更多回复 ({{ comment.replies.length - comment.visibleRepliesCount }}条)
+                </el-button>
               </div>
 
-              <div class="reply-actions">
-                <el-button link @click="likeComment(reply.comment_id)">
-                  <el-icon><Star /></el-icon>
-                  点赞 ({{ reply.likes }})
+              <!-- 收起回复按钮 -->
+              <div class="collapse-replies">
+                <el-button
+                  link
+                  @click="collapseReplies(comment)"
+                  class="collapse-btn"
+                >
+                  <el-icon><ArrowUp /></el-icon>
+                  收起回复
                 </el-button>
               </div>
             </div>
@@ -278,7 +322,7 @@
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Picture, Star } from '@element-plus/icons-vue'
+import { Picture, Star, ArrowDown, ArrowUp } from '@element-plus/icons-vue'
 import { useBookStore } from '@/stores/books'
 import { useUserStore } from '@/stores/user'
 import api from '@/utils/api'
@@ -296,7 +340,8 @@ const loading = ref(false)
 const selectedDays = ref(30)
 const isFavorited = ref(false)
 
-// 评论区相关状态
+// 评论区相关状态 - 新增回复控制字段
+const defaultRepliesToShow = 2; // 默认显示的回复数量
 const comments = ref([])
 const newComment = ref('')
 const submittingComment = ref(false)
@@ -485,13 +530,36 @@ const formatDate = (timestamp) => {
   return new Date(timestamp * 1000).toLocaleDateString()
 }
 
-// 评论区相关方法
+// 评论区相关方法 - 新增展开/收起回复方法
+// 展开/收起回复
+const toggleReplies = (comment) => {
+  comment.showReplies = !comment.showReplies
+}
 
-// 获取评论
+// 展开更多回复
+const showMoreReplies = (comment) => {
+  comment.visibleRepliesCount = comment.replies.length
+  comment.hasMoreReplies = false
+}
+
+// 收起回复
+const collapseReplies = (comment) => {
+  comment.visibleRepliesCount = defaultRepliesToShow
+  comment.hasMoreReplies = comment.replies.length > defaultRepliesToShow
+  comment.showReplies = false
+}
+
+// 获取评论 - 修改后添加回复控制字段
 const fetchComments = async () => {
   try {
     const response = await api.getBookComments(bookId)
-    comments.value = response.data
+    // 为每条评论添加展开状态和显示回复数量控制
+    comments.value = response.data.map(comment => ({
+      ...comment,
+      showReplies: false, // 控制是否显示回复
+      visibleRepliesCount: defaultRepliesToShow, // 当前显示的回复数量
+      hasMoreReplies: comment.replies && comment.replies.length > defaultRepliesToShow // 是否有更多回复
+    }))
   } catch (error) {
     ElMessage.error('获取评论失败')
   }
@@ -782,10 +850,50 @@ onMounted(() => {
   text-align: right;
 }
 
-.replies-list {
-  margin-top: 15px;
-  padding-left: 50px; /* 与头像对齐 */
+/* 回复区域样式（新增） */
+.replies-section {
+  margin-top: 10px;
   border-left: 2px solid #f0f0f0;
+  padding-left: 15px;
+}
+
+.replies-count {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  font-size: 12px;
+  color: #909399;
+}
+
+.count-text {
+  font-size: 12px;
+}
+
+.toggle-replies-btn {
+  font-size: 12px;
+  color: #1890ff;
+}
+
+.show-more-replies,
+.collapse-replies {
+  text-align: center;
+  margin: 10px 0;
+}
+
+.more-replies-btn,
+.collapse-btn {
+  font-size: 12px;
+  color: #1890ff;
+}
+
+.more-replies-btn .el-icon,
+.collapse-btn .el-icon {
+  margin-right: 4px;
+}
+
+.replies-list {
+  padding-left: 35px; /* 与头像对齐 */
 }
 
 .reply-item {
@@ -809,7 +917,7 @@ onMounted(() => {
 
 .reply-time {
   font-size: 11px;
-  color: 999;
+  color: #999;
 }
 
 .reply-content {

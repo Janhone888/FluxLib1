@@ -55,7 +55,7 @@ except Exception as e:
     exit(1)
 
 
-# -------------------------- 表格创建（完整保留原逻辑，无修改）--------------------------
+# -------------------------- 表格创建（完整保留原逻辑，添加CommentLikes表）--------------------------
 def create_tables():
     """创建核心表格，非核心表格通过异步线程延迟创建"""
     try:
@@ -90,8 +90,8 @@ def create_tables():
 
 
 def create_non_core_tables(existing_tables, table_options, reserved_throughput):
-    """延迟创建非核心表（公告、评论等，不影响核心服务启动）"""
-    time.sleep(10)  # 延迟10秒，等待核心服务完成启动
+    """延迟创建非核心表（含新增的CommentLikes表）"""
+    time.sleep(10)  # 延迟10秒，等待核心服务启动
     try:
         # 3. 验证码表（VerificationCodes）
         if VERIFICATION_CODES_TABLE not in existing_tables:
@@ -107,7 +107,8 @@ def create_non_core_tables(existing_tables, table_options, reserved_throughput):
             (VIEW_HISTORY_TABLE, [('history_id', 'STRING')]),  # 浏览历史表
             (ANNOUNCEMENTS_TABLE, [('announcement_id', 'STRING')]),  # 公告表
             (COMMENTS_TABLE, [('comment_id', 'STRING')]),  # 评论表
-            (RESERVATIONS_TABLE, [('reservation_id', 'STRING')])  # 预约记录表
+            (RESERVATIONS_TABLE, [('reservation_id', 'STRING')]),  # 预约记录表
+            ('CommentLikes', [('comment_id', 'STRING'), ('user_id', 'STRING')])  # 新增：评论点赞表-复合主键
         ]
 
         for table_name, primary_key in non_core_tables:

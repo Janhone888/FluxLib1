@@ -81,9 +81,9 @@ def register_comments_routes(bp):
 
     @bp.route('/comments/<comment_id>/like', methods=['POST'])
     def handle_like_comment(comment_id):
-        """点赞评论"""
+        """点赞/取消点赞评论"""
         try:
-            user_id = get_current_user_id(request.headers)
+            user_id = get_current_user_id(request.headers)  # 获取当前用户ID
             if not user_id:
                 return jsonify({'error': '未授权访问'}), 401
 
@@ -91,20 +91,21 @@ def register_comments_routes(bp):
             if not comment:
                 return jsonify({'error': '评论不存在'}), 404
 
-            success, result = comment.like_comment()
-
-            if success:
-                # ✅ 重新加载完整评论数据（包含用户信息）
-                updated_comment = Comment.get_by_id(comment_id)
-                return jsonify({
-                    'success': True,
-                    'likes': updated_comment.likes,
-                    'user_display_name': updated_comment.user_display_name,
-                    'user_avatar_url': updated_comment.user_avatar_url
-                }), 200
-            else:
+            # 关键修改：调用like_comment时传入user_id
+            success, result = comment.like_comment(user_id)
+            if not success:
                 return jsonify({'error': result}), 400
 
+            # 返回更新后的点赞数和操作类型（点赞/取消点赞）
+            updated_comment = Comment.get_by_id(comment_id)
+            return jsonify({
+                'success': True,
+                'likes': updated_comment.likes,
+                'action': result.get('action'),  # 前端可根据action更新按钮状态
+                'user_display_name': updated_comment.user_display_name,
+                'user_avatar_url': updated_comment.user_avatar_url
+            }), 200
+
         except Exception as e:
-            logger.error(f"点赞评论失败: comment_id={comment_id}, err={str(e)}")
+            logger.error(f"点赞失败：comment_id={comment_id}, err={str(e)}")
             return jsonify({'error': 'Failed to like comment'}), 500
