@@ -19,7 +19,7 @@ from config import (
 )
 
 # -------------------------- OTS配置（修改版：完全对齐1.docx固定值）--------------------------
-# ① 对齐1.docx：固定endpoint和实例名，不可修改；密钥从环境变量获取（已修正：移除末尾空格）
+#固定endpoint和实例名，不可修改；密钥从环境变量获取（已修正：移除末尾空格）
 OTS_ENDPOINT = "https://book-mgmt-ots.cn-hangzhou.ots.aliyuncs.com"  # 与1.docx一致，无末尾空格
 OTS_INSTANCE_NAME = "book-mgmt-ots"  # 与1.docx一致
 ALIYUN_ACCESS_KEY = os.getenv("ALIYUN_ACCESS_KEY")
@@ -107,8 +107,8 @@ def create_non_core_tables(existing_tables, table_options, reserved_throughput):
             (VIEW_HISTORY_TABLE, [('history_id', 'STRING')]),  # 浏览历史表
             (ANNOUNCEMENTS_TABLE, [('announcement_id', 'STRING')]),  # 公告表
             (COMMENTS_TABLE, [('comment_id', 'STRING')]),  # 评论表
-            (RESERVATIONS_TABLE, [('reservation_id', 'STRING')]),  # 预约记录表
-            ('CommentLikes', [('comment_id', 'STRING'), ('user_id', 'STRING')])  # 新增：评论点赞表-复合主键
+            (RESERVATIONS_TABLE, [('reservation_id', 'STRING')]),  # 预约记录表 - 使用仓储层
+            ('CommentLikes', [('comment_id', 'STRING'), ('user_id', 'STRING')])  # 评论点赞表-复合主键
         ]
 
         for table_name, primary_key in non_core_tables:

@@ -8,11 +8,11 @@ from utils.auth import get_current_user_id
 
 
 def get_book_list(page=1, size=10, category=''):
-    """获取图书列表（添加总数获取超时保护）"""
+    """获取图书列表（使用仓储层优化）"""
     try:
         logger.info(f"🔍 开始获取图书列表: page={page}, size={size}, category='{category}'")
 
-        # 1. 调用Book模型获取数据
+        # 1. 调用Book模型获取数据（已使用仓储层）
         logger.info("📚 调用 Book.get_list()...")
         books, total = Book.get_list(page=page, size=size, category=category)
         logger.info(f"📊 查询结果: 获取到 {len(books)} 本书, 总数={total}")
@@ -68,9 +68,9 @@ def get_book_list(page=1, size=10, category=''):
 
 
 def get_book_detail(book_id, headers=None):
-    """获取图书详情（复刻原版handle_get_book逻辑，含浏览历史记录）"""
+    """获取图书详情（使用仓储层优化）"""
     try:
-        # 1. 获取图书信息（与原版一致：校验图书存在性）
+        # 1. 获取图书信息（通过仓储层）
         book = Book.get_by_id(book_id)
         if not book:
             logger.warning(f"获取图书详情失败: 图书不存在（book_id={book_id}）")
@@ -79,17 +79,20 @@ def get_book_detail(book_id, headers=None):
                 'body': json.dumps({'error': 'Book not found'})
             }
 
-        # 2. 记录浏览历史（原版逻辑：仅登录用户记录）
+        # 2. 记录浏览历史（使用仓储层优化）
         if headers:
             user_id = get_current_user_id(headers)
             if user_id:
                 user = User.get_by_id(user_id)
                 if user:
-                    # 调用User模型添加浏览历史（与原版add_view_history一致）
-                    user.add_view_history(book_id)
-                    logger.info(f"记录浏览历史: user_id={user_id}, book_id={book_id}")
+                    # 通过仓储层添加浏览历史
+                    success, err = user.add_view_history(book_id)
+                    if success:
+                        logger.info(f"记录浏览历史: user_id={user_id}, book_id={book_id}")
+                    else:
+                        logger.warning(f"记录浏览历史失败: {err}")
 
-        # 3. 获取借阅历史（与原版一致）
+        # 3. 获取借阅历史（通过仓储层）
         borrow_history = book.get_borrow_history()
         formatted_history = []
         for record in borrow_history:
@@ -102,20 +105,20 @@ def get_book_detail(book_id, headers=None):
                 'status': record.status
             })
 
-        # 4. 格式化图书详情（与原版字段、类型完全一致）
+        # 4. 格式化图书详情
         book_detail = {
             'book_id': book.book_id,
             'title': book.title,
             'author': book.author,
             'publisher': book.publisher,
             'isbn': book.isbn,
-            'price': book.price,  # float类型
+            'price': book.price,
             'category': book.category,
             'description': book.description,
             'cover': book.cover,
             'summary': book.summary,
             'status': book.status,
-            'stock': book.stock,  # int类型
+            'stock': book.stock,
             'created_at': book.created_at,
             'updated_at': book.updated_at,
             'borrow_history': formatted_history
@@ -134,9 +137,9 @@ def get_book_detail(book_id, headers=None):
 
 
 def create_book(book_data, headers):
-    """创建图书（复刻原版handle_create_book逻辑，含管理员权限校验）"""
+    """创建图书（使用仓储层优化）"""
     try:
-        # 1. 权限校验（原版逻辑：仅管理员可创建）
+        # 1. 权限校验
         user_id = get_current_user_id(headers)
         if not user_id:
             logger.warning("创建图书失败: 未授权访问（无用户ID）")
@@ -144,7 +147,7 @@ def create_book(book_data, headers):
                 'statusCode': 401,
                 'body': json.dumps({'error': '未授权访问'})
             }
-        # 校验用户角色（与原版一致：仅admin角色可操作）
+
         user = User.get_by_id(user_id)
         if not user or user.role != 'admin':
             logger.warning(f"创建图书失败: 权限不足（user_id={user_id}, role={user.role if user else 'unknown'}）")
@@ -153,7 +156,7 @@ def create_book(book_data, headers):
                 'body': json.dumps({'error': '需要管理员权限'})
             }
 
-        # 2. 调用Book模型创建图书（与原版一致）
+        # 2. 调用Book模型创建图书（通过仓储层）
         success, result = Book.create_book(book_data)
         if not success:
             logger.error(f"创建图书失败: 参数校验不通过（err={result}）")
@@ -162,7 +165,7 @@ def create_book(book_data, headers):
                 'body': json.dumps({'error': result})
             }
 
-        # 3. 组装成功响应（与原版结构一致）
+        # 3. 组装成功响应
         return {
             'statusCode': 201,
             'headers': {'Content-Type': 'application/json'},
@@ -184,9 +187,9 @@ def create_book(book_data, headers):
 
 
 def update_book(book_id, book_data, headers):
-    """更新图书（复刻原版handle_update_book逻辑，含权限与参数校验）"""
+    """更新图书（使用仓储层优化）"""
     try:
-        # 1. 权限校验（与原版一致：仅管理员可更新）
+        # 1. 权限校验
         user_id = get_current_user_id(headers)
         if not user_id:
             return {
@@ -200,7 +203,7 @@ def update_book(book_id, book_data, headers):
                 'body': json.dumps({'error': '需要管理员权限'})
             }
 
-        # 2. 校验图书存在性（与原版一致）
+        # 2. 校验图书存在性
         book = Book.get_by_id(book_id)
         if not book:
             return {
@@ -208,7 +211,7 @@ def update_book(book_id, book_data, headers):
                 'body': json.dumps({'error': 'Book not found'})
             }
 
-        # 3. 调用Book模型更新（与原版一致）
+        # 3. 调用Book模型更新（通过仓储层）
         success, err = book.update_book(book_data)
         if not success:
             logger.error(f"更新图书失败: book_id={book_id}, err={err}")
@@ -217,7 +220,7 @@ def update_book(book_id, book_data, headers):
                 'body': json.dumps({'error': err})
             }
 
-        # 4. 组装响应（与原版一致）
+        # 4. 组装响应
         return {
             'statusCode': 200,
             'body': json.dumps({'message': 'Book updated successfully'})
@@ -231,9 +234,9 @@ def update_book(book_id, book_data, headers):
 
 
 def delete_book(book_id, headers):
-    """删除图书（复刻原版handle_delete_book逻辑，含权限校验与错误处理）"""
+    """删除图书（使用仓储层优化）"""
     try:
-        # 1. 权限校验（与原版一致：仅管理员可删除）
+        # 1. 权限校验
         user_id = get_current_user_id(headers)
         if not user_id:
             return {
@@ -248,7 +251,7 @@ def delete_book(book_id, headers):
                 'body': json.dumps({'error': '需要管理员权限'})
             }
 
-        # 2. 校验图书存在性（与原版一致）
+        # 2. 校验图书存在性
         book = Book.get_by_id(book_id)
         if not book:
             return {
@@ -256,7 +259,7 @@ def delete_book(book_id, headers):
                 'body': json.dumps({'error': 'Book not found'})
             }
 
-        # 3. 调用Book模型删除（与原版一致）
+        # 3. 调用Book模型删除（通过仓储层）
         success, err = book.delete_book()
         if not success:
             logger.error(f"删除图书失败: book_id={book_id}, err={err}")
@@ -265,7 +268,7 @@ def delete_book(book_id, headers):
                 'body': json.dumps({'error': err})
             }
 
-        # 4. 组装响应（与原版一致）
+        # 4. 组装响应
         return {
             'statusCode': 200,
             'body': json.dumps({'message': 'Book deleted successfully'})
@@ -279,9 +282,8 @@ def delete_book(book_id, headers):
 
 
 def get_book_cover_url(file_name, file_type):
-    """生成图书封面预签名URL（完全复刻原版handle_presigned_url逻辑）"""
+    """生成图书封面预签名URL（保持不变）"""
     try:
-        # 校验参数（与原版一致）
         if not file_name or not file_type:
             logger.error("生成预签名URL失败: 缺少file_name或file_type")
             return {
@@ -289,7 +291,6 @@ def get_book_cover_url(file_name, file_type):
                 'body': json.dumps({'error': 'Missing file_name or file_type'})
             }
 
-        # 调用storage工具生成URL（与原版一致）
         result = generate_presigned_url(file_name, file_type)
         return result
     except Exception as e:

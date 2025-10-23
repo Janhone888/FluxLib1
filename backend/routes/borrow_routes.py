@@ -2,9 +2,9 @@ import json
 import time
 from flask import request, jsonify
 from services.borrow_service import (
-    borrow_book, return_book, reserve_book,
+    borrow_book, return_book,
     batch_borrow_books, batch_return_books, get_user_borrows,
-    return_book_by_borrow_id  # 新增：导入通过借阅ID归还的服务函数
+    return_book_by_borrow_id
 )
 from config import logger
 
@@ -61,29 +61,6 @@ def register_borrow_routes(bp):
         except Exception as e:
             logger.error(f"处理图书提前归还失败: book_id={book_id}, {str(e)}", exc_info=True)
             return jsonify({'error': 'Failed to return book early'}), 500
-
-    @bp.route('/books/<book_id>/reserve', methods=['POST'])
-    def handle_reserve_book(book_id):
-        """预约图书（对应原代码同名路由）"""
-        try:
-            data = request.get_json() or {}
-            # 提取预约参数（与原代码一致：reserve_date、time_slot为必填，days默认30）
-            reserve_date = data.get('reserve_date')
-            time_slot = data.get('time_slot')
-            days = data.get('days', 30)
-            headers = request.headers
-            # 校验必填参数
-            if not reserve_date or not time_slot:
-                return jsonify({'error': '预约日期和时间段是必填项'}), 400
-            result = reserve_book(book_id, headers, reserve_date, time_slot, days)
-            status_code = result['statusCode']
-            body = result['body']
-            if isinstance(body, str):
-                body = json.loads(body)
-            return jsonify(body), status_code
-        except Exception as e:
-            logger.error(f"处理图书预约失败: book_id={book_id}, {str(e)}", exc_info=True)
-            return jsonify({'error': 'Failed to reserve book'}), 500
 
     @bp.route('/books/batch-borrow', methods=['POST'])
     def handle_batch_borrow():

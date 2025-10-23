@@ -2,7 +2,8 @@ import json
 from flask import request, jsonify
 from services.user_service import (
     get_current_user_info, update_user_profile,
-    handle_user_favorite, get_user_favorites, get_user_view_history
+    handle_user_favorite, get_user_favorites, get_user_view_history,
+    check_user_favorite  # 新增导入
 )
 from config import logger
 from utils.auth import get_current_user_id  # 直接导入工具函数，避免循环导入
@@ -88,17 +89,15 @@ def register_user_routes(bp):
 
     @bp.route('/favorites/<book_id>/check', methods=['GET'])
     def handle_check_favorite(book_id):
-        """检查收藏状态（对应原代码handle_check_favorite逻辑）"""
+        """检查收藏状态（使用仓储层优化）"""
         try:
             headers = request.headers
-            user_id = get_current_user_id(headers)
-            if not user_id:
-                return jsonify({'error': '未授权访问'}), 401
-            # 调用User模型检查收藏（避免循环导入，直接通过User模型调用）
-            from models.user import User
-            user = User.get_by_id(user_id)
-            is_favorited = user.check_favorite(book_id) if user else False
-            return jsonify({'is_favorited': is_favorited}), 200
+            result = check_user_favorite(book_id, headers)
+            status_code = result['statusCode']
+            body = result['body']
+            if isinstance(body, str):
+                body = json.loads(body)
+            return jsonify(body), status_code
         except Exception as e:
             logger.error(f"处理收藏状态检查失败: book_id={book_id}, {str(e)}", exc_info=True)
             return jsonify({'error': 'Failed to check favorite'}), 500

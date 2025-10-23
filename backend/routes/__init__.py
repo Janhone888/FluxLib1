@@ -25,13 +25,14 @@ def register_all_routes():
 
     # 2. 导入其他核心路由注册函数
     try:
-        # 核心路由：认证、借阅、用户、公告、评论、AI
+        # 核心路由：认证、借阅、用户、公告、评论、AI、预约
         from .auth_routes import register_auth_routes
         from .borrow_routes import register_borrow_routes
         from .user_routes import register_user_routes
         from .announcement_routes import register_announcement_routes
         from .comments_routes import register_comments_routes
-        from .ai_routes import register_ai_routes  # 新增AI路由注册函数导入
+        from .ai_routes import register_ai_routes
+        from .reservation_routes import register_reservation_routes  # 新增
         logger.info("✅ 其他路由注册函数导入成功")
     except ImportError as e:
         logger.error(f"❌ 其他路由函数导入失败: {str(e)}", exc_info=True)
@@ -68,6 +69,11 @@ def register_all_routes():
         logger.info("🤖 注册AI路由...")
         register_ai_routes(routes_bp)
         logger.info("✅ AI路由注册完成")
+
+        # 预约路由
+        logger.info("📅 注册预约路由...")
+        register_reservation_routes(routes_bp)
+        logger.info("✅ 预约路由注册完成")
 
         logger.info("🎉 所有核心路由注册完成")
     except Exception as e:

@@ -1,4 +1,4 @@
-# 10.12.docx 中修复后的完整 utils/storage.py（仅改 sign_url 参数名，其他逻辑不变）
+
 import uuid
 from config import logger, OSS_BUCKET_NAME, OSS_ENDPOINT, ALIYUN_ACCESS_KEY, ALIYUN_ACCESS_SECRET
 import oss2
