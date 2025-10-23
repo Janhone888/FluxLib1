@@ -4,15 +4,7 @@
 
 ![image](https://github.com/Janhone888/FluxLib1/blob/main/picture/f2fc046b71aed54fc2f4ecb0ab142188.png)
 
-FluxLib 泛集库是一个基于阿里云核心服务构建的全栈图书管理系统，采用前后端分离架构，后端以 Flask 为开发框架，前端基于 Vue3+Element Plus 开发。
-
-该系统核心功能聚焦图书管理全场景，提供**图书全生命周期管理**（增删改查、分类筛选、封面 OSS 存储）、**借阅归还体系**（普通用户预约借阅、管理员立即借阅、单本 / 批量归还、提前归还标记，管理员登陆页面与用户登陆所看到的页面不一样）、**精细化用户管理**（邮箱验证码注册、角色权限控制、个人信息编辑）。
-
-深度集成基于 DeepSeek API 的 AI 智能助手，可提供图书推荐、借阅规则解答、图书馆运营时间查询及图书内容咨询。
-
-同时支持用户互动（评论嵌套回复、图书收藏、浏览历史记录）、公告管理（管理员创建 / 删除、用户查看）及数据分析（借阅趋势、热门图书、分类分布）等扩展功能，具备高性能、可扩展、安全可靠的特点。
-
-
+FluxLib 智能图书管理系统是一套基于**前后端分离架构**的现代化图书馆管理解决方案，整合了图书全生命周期管理、用户权限控制、借阅预约流程、互动社区及 AI 智能助手功能。系统解决传统图书馆 “管理效率低、用户操作繁琐、信息同步不及时、服务智能化不足” 等痛点，为管理员提供高效的后台管理与数据可视化工具，为普通用户提供 “查询 - 借阅 - 互动 - 反馈” 的一站式图书服务体验，同时支持多端适配与云端部署。
 
 由于前端部署在Vercel，后端部署在阿里云函数计算，需要使用外网点击[https://book-mgmt-2y6iok4zv-janhones-projects.vercel.app]，打开我们的网站。打不开可能我正在维护中或者我欠费了，来不及续费。
 
@@ -21,905 +13,329 @@ FluxLib 泛集库是一个基于阿里云核心服务构建的全栈图书管理
 团队名称: 微信用户IOX6的团队的团队
 相关项目: FluxLib泛集库
 
+## 关键特性（Features）
 
+### 1 .核心业务功能
 
-后续以及正在做的优化方向:
+- **用户管理模块**：支持用户注册（邮箱验证码）、登录（普通用户 / 管理员权限区分）、密码重置、个人资料编辑（头像 / 背景图上传）、角色控制（admin/user）。
+- **图书管理模块**：管理员可实现图书 CRUD（含封面 OSS 上传）、分类管理、库存控制；用户可按分类 / 关键词查询图书、查看详情及借阅历史。
+- **借阅预约模块**：支持单本 / 批量借阅、按期 / 提前归还、图书预约（指定日期 / 时间段）、借阅记录查询，自动同步图书库存状态。
+- **互动社区模块**：用户可对图书发表评论、回复评论、点赞评论，支持收藏图书、查看浏览历史，形成用户与图书的互动闭环。
+- **AI 智能助手模块**：基于 DeepSeek 大模型，整合系统内图书数据，为用户提供图书推荐、借阅规则解答、图书馆营业时间查询等智能服务，支持拖拽 / 缩放聊天窗口。
 
-1.添加云图书/有声图书听书功能
+### 2 技术特性
 
-2.开发反爬策略
+- **架构设计**：采用 “仓储模式（Repository Pattern）” 解耦数据访问与业务逻辑，后端分层清晰（模型 - 仓储 - 服务 - 路由），前端基于 Vue3+Pinia 实现状态管理。
+- **云端集成**：依赖阿里云 OTS（表格存储）存储业务数据、OSS 存储图书封面 / 用户头像，确保数据高可用；Redis 缓存用户 Token 与高频数据，提升性能。
+- **安全优化**：密码 SHA256 哈希存储、Token 身份验证、管理员操作权限校验、验证码有效期控制，保障系统安全。
+- **数据可视化**：管理员端提供借阅趋势折线图、图书分类饼图、热门图书柱状图，支持数据驱动决策。
 
-3.优化 AI 功能，支持记录用户行为数据并生成用户个人画像，提升图书推荐精准度，同时辅助管理员高效管理网站。
 
 
+## 快速开始（Quick Start）
 
-## 核心功能
+本指南帮助你 5 分钟内本地运行系统或部署到云端，体验核心功能。
 
-### 1.用户认证系统
+### 1. 后端（阿里云部署 / 本地运行）
 
-- 邮箱验证码注册/登录
-- JWT Token认证
--  管理员账户自动创建
-- 角色权限控制（用户/管理员）
-- 用户个人信息管理（显示名称、头像、性别）
+#### 本地运行步骤
 
+1. **克隆代码**
 
+   ```bash
+   git clone https://github.com/your-username/fluxlib-backend.git
+   cd fluxlib-backend/Code
+   ```
 
-### 2.图书管理
+2. **配置环境变量**创建`.env`文件，填入以下配置（需提前准备阿里云 OTS/OSS 账号、Redis 地址）：
 
-- 图书增删改查（CRUD）
-- 多条件搜索（书名/作者/分类）
-- 图书封面管理（OSS存储）
-- 库存状态管理（可借/已借/维护中）
-- 图书概述和详细描述
+   ```env
+   # 阿里云密钥
+   ALIYUN_ACCESS_KEY=your-aliyun-access-key
+   ALIYUN_ACCESS_SECRET=your-aliyun-access-secret
+   # OTS配置
+   OTS_INSTANCE_NAME=book-mgmt-ots
+   OTS_ENDPOINT=https://book-mgmt-ots.cn-hangzhou.ots.aliyuncs.com
+   # OSS配置
+   OSS_BUCKET_NAME=book-mgmt-images
+   OSS_ENDPOINT=https://oss-cn-hangzhou.aliyuncs.com
+   # Redis配置
+   REDIS_HOST=your-redis-host
+   REDIS_PORT=6379
+   REDIS_PASSWORD=your-redis-password
+   # AI配置
+   DEEPSEEK_API_KEY=your-deepseek-api-key
+   # 管理员配置
+   ADMIN_CODE=10N086
+   ADMIN_EMAIL=admin@bookmgmt.com
+   ADMIN_DEFAULT_PASSWORD=Admin@1234
+   ```
 
+3. **安装依赖**
 
+   ```bash
+   pip install -r requirements.txt  # 依赖含Flask、aliyun-ots-sdk、redis、requests等
+   ```
 
-### 3.借阅系统
+4. **启动服务**
 
-- 单本/批量借阅
-- 借阅期限选择（7/15/30天）
-- 借阅记录管理
-- 批量归还功能
-- 预约借阅功能
+   ```bash
+   python main.py  # 服务默认运行在9000端口
+   ```
 
+### 2.前端（Vercel 部署 / 本地运行）
 
+#### 本地运行步骤
 
-### 4.数据分析
+1. **克隆代码**
 
-- 借阅趋势分析
-- 热门图书排行
-- 分类分布统计
-- 系统性能指标
+   ```bash
+   git clone https://github.com/your-username/fluxlib-frontend.git
+   cd fluxlib-frontend/Frontend
+   ```
 
+2. **配置后端 API 地址**修改`Frontend/.env.development`：
 
+   ```env
+   VITE_API_BASE=http://localhost:9000  # 本地后端地址；部署时改为阿里云后端域名
+   ```
 
-### 5.AI智能助手
+3. **安装依赖**
 
-- **智能图书推荐** - 基于馆藏图书数据进行个性化推荐
-- **运营时间查询** - 提供图书馆开放时间信息
-- **借阅规则解答** - 解释借阅政策、期限和规则
-- **图书内容查询** - 基于图书描述回答相关问题
-- **多用户隔离** - 确保用户聊天记录完全隔离
+   ```bash
+   npm install  # 依赖含Vue3、Element-Plus、Pinia、ECharts等
+   ```
 
+4. **本地启动**
 
+   ```bash
+   npm run dev  # 前端默认运行在5173端口
+   ```
 
-### 6.用户互动功能
+#### 部署到 Vercel
 
-- 图书评论系统
-- 评论点赞功能
-- 回复评论功能
+1. 访问[Vercel 官网](https://vercel.com/)，登录后点击 “New Project”；
+2. 选择 “Import Git Repository”，粘贴前端仓库地址；
+3. 配置环境变量`VITE_API_BASE`（填入阿里云后端公网域名）；
+4. 点击 “Deploy”，等待部署完成，获取前端访问地址。
 
 
 
-## 前端组件文档
+##  环境要求（Prerequisites）
 
-### 核心组件
+| 环境 / 工具      | 版本要求            | 用途说明                             |
+| ---------------- | ------------------- | ------------------------------------ |
+| Python           | 3.8+                | 后端运行环境                         |
+| Node.js          | 16+                 | 前端 Vue3 项目构建与运行             |
+| Redis            | 6.0+                | 用户 Token 缓存、高频数据缓存        |
+| 阿里云服务       | OTS/OSS 开通        | 数据存储（OTS）、静态资源存储（OSS） |
+| DeepSeek API Key | 有效密钥            | AI 智能助手功能（可选，无则屏蔽 AI） |
+| 浏览器           | Chrome 90+/Edge 90+ | 前端页面访问                         |
 
-### 1.ImageUploader.vue
 
-- 图书封面上传组件
-- 支持拖拽上传
-- 进度显示和取消功能
-- 自动生成OSS预签名URL
 
-### 2.TopNav.vue
+## 安装步骤（Installation）
 
-- 顶部导航栏
-- 根据用户角色显示不同菜单
-- 用户信息展示和退出功能
-
-### 3.BookCard.vue
-
-- 图片卡片展示组件
-- 显示图书基本信息
-- 状态标签和库存显示
-
-### 4.Chatbot.vue 
-
-- 浮动式AI聊天助手组件，支持展开/收起
-- 对话式交互界面，显示对话历史
-- 支持文本输入与快捷问题选择
-- 用户消息持久化存储
-- 新消息通知提醒
-
-
-
-### 页面视图
-
-### 1.LoginView.vue
-
-- 动态背景视频
-- 登陆/注册双模式切换
-- 验证码发送和倒计时
-
-### 2.BooksView.vue
-
-- 图书网格布局展示
-- 搜索和分类筛选
-- 分页功能
-
-### 3.BookDetail.vue
-
-- 图片详细信息展示
-- 借阅/归还功能
-- 借阅历史记录
-- 评论区功能
-
-### 4.BorrowManage.vue
-
-- 用户借阅记录管理
-- 单本/批量归还
-- 状态筛选和排序
-
-### 5.Analytics.vue
-
-- 数据可视化展示
-- 借阅趋势图表
-- 分类分布饼图
-- 热门图书排行
-
-### 6.UserProfile.vue
-
-- 用户个人信息管理
-- 收藏列表展示
-- 浏览历史记录
-- 个人信息编辑(显示名称、头像、性别)
-
-### 7.EditBook.vue
-
-- 图书信息编辑页面
-- 支持所有图书字段编辑
-- 包含图书概述字段
-
-### 8. AddBook.vue
-
-- 添加新书页面
-- 表单验证和提交
-
-
-
-## 数据库设计
-
-### 图书表(Books)
-
-| ***\*列名\**** | 类型    | 描述       |
-| -------------- | ------- | ---------- |
-| book_id        | STRING  | 图书唯一ID |
-| title          | STRING  | 书名       |
-| author         | STRING  | 作者       |
-| publisher      | STRING  | 出版社     |
-| isbn           | STRING  | ISBN号     |
-| description    | STRING  | 详细描述   |
-| summary        | STRING  | 图书概述   |
-| price          | DOUBLE  | 价格       |
-| stock          | INTEGER | 库存数量   |
-| category       | STRING  | 分类       |
-| cover          | STRING  | 封面url    |
-| status         | STRING  | 状态       |
-| created_at     | INTEGER | 创建时间戳 |
-| updated_at     | INTEGER | 更新时间戳 |
-
-
-
-### 用户表
-
-| ***\*列名\**** | 类型    | 描述        |
-| -------------- | ------- | ----------- |
-| email          | STRING  | 用户邮箱    |
-| user_id        | STRING  | 用户ID      |
-| password       | STRING  | 密码        |
-| Role           | STRING  | 角色        |
-| created_at     | INTEGER | I创建时间戳 |
-| is_verified    | STRING  | 验证状态    |
-| display_name   | STRING  | 显示名称    |
-| avatar_url     | STRING  | 头像URL     |
-| gender         | STRING  | 性别        |
-
-
-
-### 借阅记录表
-
-| 列名        | 类型    | 描述       |
-| ----------- | ------- | ---------- |
-| borrow_id   | STRING  | 借阅记录ID |
-| book_id     | STRING  | 图书ID     |
-| user_id     | STRING  | 用户ID     |
-| borrow_date | INTEGER | 借阅日期   |
-| due_date    | INTEGER | 应还日期   |
-| return_date | INTEGER | 归还日期   |
-| status      | STRING  | 状态       |
-
-
-
-### 评论表
-
-| 列名       | 类型    | 描述     |
-| :--------- | :------ | :------- |
-| comment_id | STRING  | 评论ID   |
-| book_id    | STRING  | 图书ID   |
-| user_id    | STRING  | 用户ID   |
-| parent_id  | STRING  | 父评论ID |
-| content    | STRING  | 评论内容 |
-| likes      | INTEGER | 点赞数   |
-| created_at | INTEGER | 创建时间 |
-
-
-
-## 安装和运行
-
-### 环境要求
-
-**后端环境**
-
-- Python 3.8+
-- 需要安装的第三方库：
-  - flask
-  - tablestore
-  - oss2
-  - smtplib
-  - uuid
-  - hashlib
-
-**前端环境**
-
-- Node.js 14+
-- npm 或 yarn
-
-
-
-### 快速开始
-
-1.**启动服务器**：
-
-配置环境变量
+### 1. 后端安装
 
 ```bash
-export OTS_INSTANCE_NAME=book-mgmt-ots
-export OTS_ENDPOINT=https://book-mgmt-ots.cn-hangzhou.ots.aliyuncs.com
-export OTS_TABLE_NAME=Books
-export USERS_TABLE=Users
-export VERIFICATION_CODES_TABLE=VerificationCodes
-export BORROW_RECORDS_TABLE=BorrowRecords
-export OSS_BUCKET_NAME=book-mgmt-images
-export OSS_ENDPOINT=https://oss-cn-hangzhou.aliyuncs.com
-export ALIYUN_ACCESS_KEY=your_access_key
-export ALIYUN_ACCESS_SECRET=your_access_secret
-export ALIYUN_REGION=cn-hangzhou
-export EMAIL_HOST=smtp.qq.com
-export EMAIL_PORT=465
-export EMAIL_USER=your_email@qq.com
-export EMAIL_PASSWORD=your_email_password
-export FC_SERVER_PORT=9000
+git clone https://github.com/your-username/fluxlib-backend.git
+cd fluxlib-backend
 ```
 
-安装依赖并启动服务器
+1. **虚拟环境配置（推荐）**
 
-```bash
-pip install flask tablestore oss2
-python app.py
-```
-
-服务器将在 [http://localhost:9000](http://localhost:9000/) 启动
-
-2.**启动前端客户端**：
-
-配置环境变量（创建 `.env` 文件）：
-
-```env
-VITE_API_BASE=http://localhost:9000
-VITE_OSS_BUCKET=book-mgmt-images
-VITE_OSS_REGION=cn-hangzhou
-```
-
-安装依赖并启动客户端：
-
-```python
-npm install
-npm run dev
-```
-
-前端应用将在 [http://localhost:3000](http://localhost:3000/) 启动
-
-
-
-## 使用说明
-
-### API接口文档
-
-1.**获取API信息**
-
-```text
-GET /
-```
-
-响应示例
-
-```json
-{
-  "message": "Backend is running"
-}
-```
-
-2.**健康检查**
-
-```text
-GET /health
-```
-
-响应示例
-
-```text
-OK
-```
-
-3.**发送验证码**
-
-```text
-POST /send-verification-code
-```
-
-请求体:
-
-```json
-{
-  "email": "user@example.com"
-}
-```
-
-响应示例
-
-```json
-{
-  "message": "Verification code sent"
-}
-```
-
-4.**用户注册**
-
-```text
-POST /register
-```
-
-请求体:
-
-```json
-{
-  "email": "user@example.com",
-  "password": "password123",
-  "code": "123456"
-}
-```
-
-响应示例
-
-```json
-{
-  "user_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
-}
-```
-
-5.**用户登陆**
-
-```text
-POST /login
-```
-
-请求体:
-
-```json
-{
-  "email": "user@example.com",
-  "password": "password123"
-}
-```
-
-响应示例
-
-```json
-{
-  "token": "bearer-token-here",
-  "user_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-  "email": "user@example.com",
-  "role": "user"
-}
-```
-
-6.**获取图书列表**
-
-```text
-GET /books?page=1&size=10&category=computer
-```
-
-**查询参数**
-
-- page: 页码（默认1）
-- size: 每页数量（默认10）
-- category: 分类筛选（可选）
-
-响应示例
-
-```json
-{
-  "items": [
-    {
-      "book_id": "book-001",
-      "title": "深入理解计算机系统",
-      "cover": "https://example.com/cover.jpg",
-      "category": "computer",
-      "status": "available",
-      "stock": 5,
-      "author": "Randal E. Bryant",
-      "publisher": "机械工业出版社",
-      "price": 128.5
-    }
-  ],
-  "total": 100,
-  "page": 1,
-  "size": 10
-}
-```
-
-7.**获取单本图书信息**
-
-```text
-、GET /books/{book_id}
-```
-
-响应示例
-
-```json
-{
-  "book_id": "book-001",
-  "title": "深入理解计算机系统",
-  "cover": "https://example.com/cover.jpg",
-  "category": "computer",
-  "status": "available",
-  "stock": 5,
-  "author": "Randal E. Bryant",
-  "publisher": "机械工业出版社",
-  "price": 128.5,
-  "description": "本书从程序员的视角详细阐述计算机系统的本质概念...",
-  "borrow_history": [
-    {
-      "borrow_id": "borrow-001",
-      "user_id": "user-001",
-      "borrow_date": 1634567890,
-      "return_date": 1635172690,
-      "status": "returned"
-    }
-  ]
-}
-```
-
-8.**创建图书**
-
-```text
-POST /books
-```
-
-请求头:
-
-```json
-Authorization: Bearer <admin_token>
-```
-
-请求体:
-
-```json
-{
-  "title": "新图书标题",
-  "author": "作者名",
-  "publisher": "出版社",
-  "isbn": "9787115549441",
-  "price": 68.5,
-  "stock": 10,
-  "category": "computer",
-  "description": "图书描述内容",
-  "cover": "https://example.com/cover.jpg"
-}
-```
-
-响应示例
-
-```json
-{
-  "book_id": "new-book-id",
-  "message": "图书创建成功"
-}
-```
-
-9.**更新图书信息**
-
-```text
-PUT /books/{book_id}
-```
-
-请求头:
-
-```json
-Authorization: Bearer <admin_token>
-```
-
-请求体:
-
-```json
-{
-  "title": "更新后的标题",
-  "stock": 8,
-  "status": "available"
-}
-```
-
-响应示例
-
-```json
-{
-  "message": "Book updated successfully"
-}
-```
-
-10.**删除图书**
-
-```text
-DELETE /books/{book_id}
-```
-
-请求头:
-
-```json
-Authorization: Bearer <admin_token>
-```
-
-响应示例
-
-```json
-{
-  "message": "Book deleted successfully"
-}
-```
-
-11.**获取OSS上传URL**
-
-```text
-GET /presigned-url?file_name=cover.jpg&file_type=image/jpeg
-```
-
-响应示例
-
-```json
-{
-  "presigned_url": "https://bucket.oss-cn-hangzhou.aliyuncs.com/book-covers/uuid-cover.jpg?signature=...",
-  "access_url": "https://bucket.oss-cn-hangzhou.aliyuncs.com/book-covers/uuid-cover.jpg"
-}xxxxxxxxxx {  "presigned_url": "https://bucket.oss-cn-hangzhou.aliyuncs.com/book-covers/uuid-cover.jpg?signature=...",  "access_url": "https://bucket.oss-cn-hangzhou.aliyuncs.com/book-covers/uuid-cover.jpg"}{  "book_id": "new-book-id",  "message": "图书创建成功"}
-```
-
-12.**借阅图书**
-
-```text
-POST /books/{book_id}/borrow
-```
-
-请求头:
-
-```json
-Authorization: Bearer <user_token>
-```
-
-请求体:
-
-```json
-{
-  "days": 30
-}
-```
-
-响应示例
-
-```json
-{
-  "success": true,
-  "borrow_id": "borrow-12345",
-  "due_date": 1635172690
-}
-```
-
-13.**归还图书**
-
-```text
-POST /books/{book_id}/return
-```
-
-请求头:
-
-```json
-Authorization: Bearer <user_token>
-```
-
-响应示例
-
-```json
-{
-  "success": true
-}
-```
-
-14.**批量借阅图书**
-
-```text
-POST /books/batch-borrow
-```
-
-请求体:
-
-```json
-{
-  "book_ids": ["book-001", "book-002", "book-003"]
-}
-```
-
-响应示例
-
-```json
-{
-  "success": true,
-  "borrowed_count": 3,
-  "results": [
-    {
-      "book_id": "book-001",
-      "success": true,
-      "borrow_id": "borrow-001",
-      "due_date": 1635172690
-    },
-    {
-      "book_id": "book-002",
-      "success": true,
-      "borrow_id": "borrow-002",
-      "due_date": 1635172690
-    },
-    {
-      "book_id": "book-003",
-      "success": false,
-      "error": "库存不足"
-    }
-  ]
-}
-```
-
-15.**获取用户借阅记录**
-
-```text
-GET /user/borrows
-```
-
-请求头:
-
-```json
-Authorization: Bearer <user_token>
-```
+   ```bash
+   # 创建虚拟环境
+   python -m venv venv
+   # 激活虚拟环境（Windows）
+   venv\Scripts\activate
+   # 激活虚拟环境（Linux/Mac）
+   source venv/bin/activate
+   ```
 
-响应示例
-
-```json
-{
-  "items": [
-    {
-      "borrow_id": "borrow-001",
-      "book_id": "book-001",
-      "user_id": "user-001",
-      "book_title": "深入理解计算机系统",
-      "book_cover": "https://example.com/cover.jpg",
-      "borrow_date": 1634567890,
-      "due_date": 1635172690,
-      "return_date": 1635172690,
-      "status": "returned"
-    }
-  ]
-}
-```
-
-16.**批量归还图书**
-
-```text
-POST /batch-return
-```
-
-请求头:
-
-```json
-Authorization: Bearer <user_token>
-```
-
-请求体:
-
-```json
-{
-  "borrow_ids": ["borrow-001", "borrow-002"]
-}
-```
-
-响应示例
-
-```json
-{
-  "success": true,
-  "results": [
-    {
-      "borrow_id": "borrow-001",
-      "success": true
-    },
-    {
-      "borrow_id": "borrow-002",
-      "success": false,
-      "error": "记录已归还"
-    }
-  ]
-}
-```
-
-17.**通过借阅ID归还图书**
-
-```text
-POST /return/{borrow_id}
-```
-
-请求头:
-
-```json
-Authorization: Bearer <user_token>
-```
-
-响应示例
-
-```json
-{
-  "success": true
-}
-```
-
+2. **依赖安装**项目根目录创建`requirements.txt`（根据代码依赖补充）：
 
+   ```txt
+   Flask==2.3.3
+   flask-cors==4.0.0
+   aliyun-ots-sdk==5.11.0
+   redis==4.6.0
+   requests==2.31.0
+   python-dotenv==1.0.0
+   cryptography==2.9.2
+   pycryptodomex==3.9.9
+   ```
 
-18.**更新用户个人信息**
+   执行安装：
 
-```text
-POST /user/profile
-```
-
-请求头:
-
-```json
-Authorization: Bearer <user_token>
-```
-
-请求体:
-
-- display_name: 显示名称
-- avatar: 头像文件
-- gender: 性别
-
-响应示例
-
-```json
-{
-  "success": true,
-  "message": "资料更新成功"
-}
-```
-
-
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-19.**获取图书评论**
+3. **环境变量配置**根目录创建`.env`文件，配置内容参考 “4.1 后端快速开始” 中的环境变量说明。
 
-```text
-GET /books/{book_id}/comments
-```
-
-响应示例:
-
-```json
-{
-  "items": [
-    {
-      "comment_id": "comment-001",
-      "book_id": "book-001",
-      "user_id": "user-001",
-      "user_display_name": "用户名",
-      "user_avatar_url": "https://example.com/avatar.jpg",
-      "content": "很好的书",
-      "likes": 5,
-      "created_at": 1634567890,
-      "replies": [
-        {
-          "comment_id": "comment-002",
-          "parent_id": "comment-001",
-          "user_id": "user-002",
-          "user_display_name": "另一个用户",
-          "user_avatar_url": "https://example.com/avatar2.jpg",
-          "content": "同意",
-          "likes": 2,
-          "created_at": 1634567990
-        }
-      ]
-    }
-  ]
-}
-```
+### 2. 前端安装
 
+1. **代码克隆**
 
+   ```bash
+   git clone https://github.com/your-username/fluxlib-frontend.git
+   cd fluxlib-frontend/Frontend
+   ```
 
-20.**创建评论**
-
-```text
-POST /books/{book_id}/comments
-```
+2. **依赖安装**
 
-请求头:
+   ```bash
+   npm install  # 自动安装package.json中的依赖（Vue3、Element-Plus等）
+   ```
 
-```json
-Authorization: Bearer <user_token>
-```
+3. **环境配置**根据运行环境创建对应`.env`文件（如`.env.development`本地开发、`.env.production`生产环境），核心配置为`VITE_API_BASE`（后端 API 地址）。
 
-请求体:
 
-```json
-{
-  "content": "评论内容",
-  "parent_id": "父评论ID(可选)"
-}
-```
 
-响应示例
+## 运行命令（Run）
 
-```json
-{
-  "success": true,
-  "comment_id": "new-comment-id"
-}
-```
+### 1. 本地运行
 
+| 模块 | 命令             | 说明                            |
+| ---- | ---------------- | ------------------------------- |
+| 后端 | `python main.py` | 启动后端服务，默认端口 9000     |
+| 前端 | `npm run dev`    | 启动前端开发服务，默认端口 5173 |
 
+### 2. 部署命令
 
-21.**点赞评论**
+#### 后端（阿里云）
 
-```text
-POST /comments/{comment_id}/like
-```
+1. 打包依赖
 
-请求头:
+   ```bash
+   pip freeze > requirements.txt  # 导出实际依赖
+   ```
 
-```json
-Authorization: Bearer <user_token>
-```
+2. 部署方式
 
-响应示例
+   - 方式 1：直接部署到阿里云 ECS，通过`nohup python main.py &`后台运行；
+   - 方式 2：构建 Docker 镜像（需创建 Dockerfile），通过容器部署。
 
-```json
-{
-  "success": true,
-  "likes": 6
-}
-```
+#### 前端（Vercel）
 
+1. 无需本地打包，直接在 Vercel 控制台 “Import Project”，选择前端 Git 仓库；
+2. 配置环境变量`VITE_API_BASE`，点击 “Deploy” 自动部署。
 
 
-## 技术栈
 
-- **前端**: Vue3 + Pinia + Element Plus + Vite
-- **后端**: Flask + 阿里云OTS（表格存储） + OSS（对象存储）
-- **AI服务**: DeepSeek技术驱动
-- **部署**: 阿里云函数计算（FC）、Vercel
-- **其他**: SMTP邮件服务（验证码）
+## 使用指南（Usage）
 
+### 1. 核心功能演示（用户视角）
 
+#### 1). 用户登录
 
-## 更新日志
+- 访问前端地址（本地：[http://localhost:5173](http://localhost:5173/)，Vercel：部署后的域名）；
+- 点击 “登录”，选择 “使用演示账号”（或手动输入：邮箱`2292974063@qq.com`，密码`123456`）；
+- 登录后自动跳转至用户首页。
 
-### 最新更新
+#### 2). 图书查询与借阅
 
-1. 添加了图书概述(summary)字段
-2. 添加了用户性别(gender)字段
-3. 修复了前端输入框隐藏的问题
-4. 增加了评论区功能
-5. 优化了API响应数据解析
-6. 添加了用户个人信息管理功能
-7. 改进了借阅权限控制（普通用户只能预约，管理员可以立即借阅）
+- 在首页点击 “图书浏览”，进入图书列表页；
+- 可通过顶部搜索框输入关键词（如 “Python”）查询图书，或通过下拉框筛选分类（如 “计算机”）；
+- 点击图书卡片进入详情页，查看图书信息（封面、作者、简介等）；
+- 若图书有库存，点击 “预约借阅”，选择预约日期和时间段，提交完成预约。
+
+#### 3). AI 智能助手互动
+
+- 点击页面右下角 “AI 助手” 图标，展开聊天窗口；
+- 在输入框发送问题，例如：“推荐 3 本计算机类的图书”“图书馆的营业时间是什么？”；
+- 等待 AI 响应（基于系统内图书数据生成推荐，遵循借阅规则）。
+
+#### 4). 个人中心操作
+
+- 点击顶部导航 “个人中心”，可编辑头像、昵称、个人简介；
+- 查看 “我的借阅”（已借阅 / 已归还记录）、“我的收藏”（取消收藏）、“浏览历史”。
+
+### 2. 管理员功能演示
+
+- 使用管理员账号登录（默认：邮箱`admin@bookmgmt.com`，密码`Admin@1234`）；
+- 登录后跳转至 “仪表盘”，查看图书总数、借阅趋势、分类分布等数据；
+- 点击 “图书管理”，可执行图书添加（上传封面至 OSS）、编辑、删除操作；
+- 点击 “借阅管理”，可查看所有用户的借阅记录，支持批量归还操作。
+
+
+
+##  项目结构（Project Structure）
+
+### 1. 后端结构（Code/）
+
+```plaintext
+Code/
+├── models/                # 数据模型层（基于仓储模式）
+│   ├── book.py            # 图书模型（属性、CRUD方法）
+│   ├── user.py            # 用户模型（注册、登录、权限）
+│   ├── borrow.py          # 借阅模型（借阅、归还逻辑）
+│   └── ...（announcement/comment/reservation等模型）
+├── repositories/          # 仓储层（数据访问抽象，解耦模型与数据库）
+│   ├── base_repository.py# 仓储基类（定义通用接口：get_by_id、create等）
+│   ├── book_repository.py# 图书仓储（OTS数据读写）
+│   └── ...（对应模型的仓储实现）
+├── routes/                # 路由层（API接口定义）
+│   ├── book_routes.py     # 图书相关接口（/books、/books/<id>）
+│   ├── auth_routes.py     # 认证接口（/login、/register）
+│   └── ...（其他业务路由）
+├── services/              # 业务逻辑层（整合模型与仓储，处理业务规则）
+│   ├── book_service.py    # 图书业务（获取列表、更新库存）
+│   ├── ai_service.py      # AI服务（DeepSeek调用、图书数据组装）
+│   └── ...（对应业务的服务实现）
+├── utils/                 # 工具类
+│   ├── auth.py           # 认证工具（密码哈希、Token验证、Redis缓存）
+│   ├── database.py        # 数据库工具（OTS客户端、表格创建）
+│   ├── email.py          # 邮件工具（验证码发送）
+│   └── storage.py         # OSS工具（预签名URL生成、文件上传）
+├── config.py              # 全局配置（环境变量读取、日志配置）
+└── main.py                # 应用入口（Flask初始化、路由注册、服务启动）
+```
+
+### 2. 前端结构（Frontend/src/）
+
+```plaintext
+Frontend/src/
+├── components/            # 通用组件
+│   ├── BookCard.vue       # 图书卡片（列表页展示）
+│   ├── ChatBot.vue        # AI助手（可拖拽、缩放、最小化）
+│   ├── ImageUploader.vue  # 图片上传（封面/头像，对接OSS）
+│   └── ...（TopNav/SearchBar等组件）
+├── views/                 # 页面组件
+│   ├── LoginView.vue      # 登录/注册页面
+│   ├── BooksView.vue      # 图书列表页面
+│   ├── BookDetail.vue     # 图书详情页面
+│   ├── Dashboard.vue      # 管理员仪表盘
+│   └── ...（个人中心、借阅管理等页面）
+├── stores/                # Pinia状态管理
+│   ├── user.py            # 用户状态（Token、用户信息）
+│   ├── book.py            # 图书状态（列表、详情、借阅状态）
+│   └── ...（其他业务状态）
+├── router/                # 路由配置
+│   └── index.js          # 路由定义、权限守卫（管理员路由拦截）
+├── utils/                 # 工具类
+│   └── api.js             # Axios封装（请求拦截、响应处理、API集合）
+├── assets/                # 静态资源
+│   ├── styles/            # 样式文件（变量、动画）
+│   └── icons/             # 图标资源
+└── App.vue                # 根组件（布局、导航）
+```
+
+
+
+## 技术栈总结
+
+| 层面     | 技术选型            | 核心作用                               |
+| -------- | ------------------- | -------------------------------------- |
+| 后端语言 | Python 3.8+         | 业务逻辑实现                           |
+| 后端框架 | Flask               | 轻量级 Web 框架，路由与中间件管理      |
+| 数据库   | 阿里云 OTS          | 分布式表格存储（支持高并发、海量数据） |
+| 静态存储 | 阿里云 OSS          | 图书封面、用户头像存储                 |
+| 缓存     | Redis               | Token 缓存、高频数据加速               |
+| 前端框架 | Vue 3 + Pinia       | 组件化开发、状态管理                   |
+| 前端 UI  | Element-Plus        | 通用组件（表格、表单、弹窗）           |
+| 可视化   | ECharts             | 管理员仪表盘数据可视化                 |
+| AI 能力  | DeepSeek API        | 智能问答与图书推荐                     |
+| 部署     | 阿里云 ECS + Vercel | 后端云端部署、前端静态部署             |
