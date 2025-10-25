@@ -12,7 +12,7 @@ import { computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import TopNav from '@/components/TopNav.vue'
-import ChatBot from '@/components/ChatBot.vue'
+import ChatBot from '@/components/ChatBot/ChatBot.vue'
 
 const route = useRoute()
 const userStore = useUserStore()
